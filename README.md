@@ -124,3 +124,4 @@ Get a site's lat/lng from Google Maps (right-click the exact spot → copy coord
   production without adding at least a PIN or device binding)
 
 Happy to build any of these next — say the word.
+# attendance-system
