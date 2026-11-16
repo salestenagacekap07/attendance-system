@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Approve Check-In</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 420px;
+    margin: 40px auto;
+    padding: 0 20px;
+    text-align: center;
+  }
+  h1 { font-size: 1.3rem; }
+  #details { margin: 20px 0; font-size: 1rem; line-height: 1.6; text-align: left; }
+  #details b { color: #111; }
+  .buttons { display: flex; gap: 12px; margin-top: 24px; }
+  button {
+    flex: 1;
+    padding: 16px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  #approveBtn { background: #16a34a; color: white; }
+  #rejectBtn { background: #dc2626; color: white; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #result {
+    margin-top: 20px;
+    padding: 14px;
+    border-radius: 6px;
+    font-size: 1rem;
+    display: none;
+  }
+  #result.ok { background: #dcfce7; color: #166534; display: block; }
+  #result.err { background: #fee2e2; color: #991b1b; display: block; }
+</style>
+</head>
+<body>
+  <h1>Attendance Approval</h1>
+  <div id="details">Loading...</div>
+
+  <div class="buttons" id="actionButtons" style="display:none;">
+    <button id="approveBtn">✅ Approve</button>
+    <button id="rejectBtn">❌ Reject</button>
+  </div>
+
+  <div id="result"></div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const detailsEl = document.getElementById('details');
+    const actionButtons = document.getElementById('actionButtons');
+    const resultEl = document.getElementById('result');
+
+    function showResult(type, text) {
+      resultEl.className = type;
+      resultEl.textContent = text;
+    }
+
+    async function loadDetails() {
+      if (!token) {
+        detailsEl.textContent = 'Missing link token.';
+        return;
+      }
+      try {
+        const res = await fetch(`/api/checkin-info?token=${encodeURIComponent(token)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          detailsEl.textContent = data.error || 'Invalid or expired link.';
+          return;
+        }
+
+        detailsEl.innerHTML = `
+          <div><b>Cleaner:</b> ${data.cleaner_name}</div>
+          <div><b>Site:</b> ${data.site_name}</div>
+          <div><b>Time:</b> ${new Date(data.created_at).toLocaleString()}</div>
+          <div><b>Distance from site:</b> ${Math.round(data.distance_meters)}m</div>
+          <div><b>Status:</b> ${data.status}</div>
+        `;
+
+        if (data.status === 'pending') {
+          actionButtons.style.display = 'flex';
+        } else {
+          showResult('ok', `This check-in was already ${data.status}.`);
+        }
+      } catch (err) {
+        detailsEl.textContent = 'Network error loading check-in.';
+      }
+    }
+
+    async function decide(decision) {
+      document.getElementById('approveBtn').disabled = true;
+      document.getElementById('rejectBtn').disabled = true;
+
+      try {
+        const res = await fetch('/api/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, decision }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showResult('err', data.error || 'Action failed.');
+          document.getElementById('approveBtn').disabled = false;
+          document.getElementById('rejectBtn').disabled = false;
+          return;
+        }
+
+        actionButtons.style.display = 'none';
+        showResult('ok', `${data.cleaner_name} marked as ${data.status}.`);
+      } catch (err) {
+        showResult('err', 'Network error. Please try again.');
+        document.getElementById('approveBtn').disabled = false;
+        document.getElementById('rejectBtn').disabled = false;
+      }
+    }
+
+    document.getElementById('approveBtn').addEventListener('click', () => decide('approved'));
+    document.getElementById('rejectBtn').addEventListener('click', () => decide('rejected'));
+
+    loadDetails();
+  </script>
+</body>
+</html>

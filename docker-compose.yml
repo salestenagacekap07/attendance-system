@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: attendance
+      POSTGRES_PASSWORD: attendance
+      POSTGRES_DB: attendance
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./backend/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://attendance:attendance@postgres:5432/attendance
+      PUBLIC_BASE_URL: https://abstract-snowfield-yelling.ngrok-free.dev
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/auth:/app/auth   # persist WhatsApp session across restarts
+      - ./frontend:/app/../frontend
+    # WhatsApp login needs a QR scan on first run — see README for how to
+    # attach to this container's logs the first time you start it.
+    stdin_open: true
+    tty: true
+
+volumes:
+  pgdata:

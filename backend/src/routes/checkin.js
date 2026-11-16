@@ -1,0 +1,148 @@
+const express = require('express');
+const { v4: uuidv4 } = require('uuid');
+const { pool } = require('../db');
+const { distanceMeters, isWithinGeofence } = require('../geofence');
+const { sendText } = require('../whatsapp');
+
+const router = express.Router();
+
+/**
+ * POST /checkin
+ * body: { employee_code, latitude, longitude }
+ *
+ * Flow:
+ *  1. Look up the cleaner and their assigned site.
+ *  2. Compute distance to the site and whether it's within the geofence.
+ *  3. Create a checkin record (pending), even if outside geofence — we still
+ *     want a record of the attempt, so it's visible/auditable, not silently lost.
+ *  4. If within geofence, notify the site's PIC via WhatsApp with an approval link.
+ *     If outside geofence, we skip the WhatsApp step and return a clear reason;
+ *     you can wire this to an "out of range" UI message.
+ */
+router.post('/checkin', async (req, res) => {
+  const { employee_code, latitude, longitude } = req.body;
+
+  if (!employee_code || latitude === undefined || longitude === undefined) {
+    return res.status(400).json({ error: 'employee_code, latitude, longitude are required' });
+  }
+
+  const lat = Number(latitude);
+  const lon = Number(longitude);
+  if (Number.isNaN(lat) || Number.isNaN(lon)) {
+    return res.status(400).json({ error: 'latitude/longitude must be numbers' });
+  }
+
+  const client = await pool.connect();
+  try {
+    const cleanerResult = await client.query(
+      `SELECT c.id AS cleaner_id, c.name AS cleaner_name,
+              s.id AS site_id, s.name AS site_name,
+              s.latitude AS site_lat, s.longitude AS site_lon, s.radius_meters
+       FROM cleaners c
+       JOIN sites s ON s.id = c.site_id
+       WHERE c.employee_code = $1`,
+      [employee_code]
+    );
+
+    if (cleanerResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Unknown employee_code' });
+    }
+
+    const cleaner = cleanerResult.rows[0];
+    const dist = distanceMeters(lat, lon, cleaner.site_lat, cleaner.site_lon);
+    const within = isWithinGeofence(dist, cleaner.radius_meters);
+    const token = uuidv4();
+
+    // Notify every PIC configured for this site.
+    const picResult = await client.query(
+      `SELECT id, name, whatsapp_number FROM pics WHERE site_id = $1 ORDER BY id`,
+      [cleaner.site_id]
+    );
+    const pics = picResult.rows;
+
+    const insertResult = await client.query(
+      `INSERT INTO checkins
+         (cleaner_id, site_id, latitude, longitude, distance_meters, within_geofence, status, approval_token, pic_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8)
+       RETURNING id, created_at`,
+      [cleaner.cleaner_id, cleaner.site_id, lat, lon, dist, within, token, pics.length > 0 ? pics[0].id : null]
+    );
+
+    const checkinId = insertResult.rows[0].id;
+
+    if (!within) {
+      return res.status(200).json({
+        checkin_id: checkinId,
+        status: 'pending',
+        within_geofence: false,
+        distance_meters: Math.round(dist),
+        message: `You are ${Math.round(dist)}m from ${cleaner.site_name}, outside the allowed ${cleaner.radius_meters}m range. Check-in logged but PIC was not notified.`,
+      });
+    }
+
+    if (pics.length === 0) {
+      return res.status(200).json({
+        checkin_id: checkinId,
+        status: 'pending',
+        within_geofence: true,
+        message: 'Checked in, but no PIC is configured for this site yet — approval could not be requested.',
+      });
+    }
+
+    const approvalUrl = `${process.env.PUBLIC_BASE_URL}/approve.html?token=${token}`;
+    const message =
+      `Attendance approval needed
+` +
+      `Cleaner: ${cleaner.cleaner_name}
+` +
+      `Site: ${cleaner.site_name}
+` +
+      `Time: ${new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}
+
+` +
+      `Approve or reject here:
+${approvalUrl}
+
+` +
+      `This link expires once used.`;
+
+    let sentCount = 0;
+    let firstError = null;
+
+    for (const pic of pics) {
+      try {
+        await sendText(pic.whatsapp_number, message);
+        sentCount += 1;
+      } catch (waErr) {
+        firstError = waErr;
+        console.error('Failed to send WhatsApp notification to PIC', pic.whatsapp_number, waErr);
+      }
+    }
+
+    if (sentCount === 0) {
+      return res.status(200).json({
+        checkin_id: checkinId,
+        status: 'pending',
+        within_geofence: true,
+        warning: 'Checked in, but WhatsApp notification to all PICs failed to send. Retry or notify PICs manually.',
+        error: firstError ? String(firstError) : undefined,
+      });
+    }
+
+    return res.status(200).json({
+      checkin_id: checkinId,
+      status: 'pending',
+      within_geofence: true,
+      distance_meters: Math.round(dist),
+      sent_to_pics: sentCount,
+      message: `Checked in at ${cleaner.site_name}. Waiting for PIC approval.`,
+    });
+  } catch (err) {
+    console.error('Error in /checkin', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+module.exports = router;
