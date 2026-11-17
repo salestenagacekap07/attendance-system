@@ -48,8 +48,9 @@ router.post('/api/approve', async (req, res) => {
     return res.status(400).json({ error: 'token and decision ("approved"|"rejected") are required' });
   }
 
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     await client.query('BEGIN');
 
     // Lock the row so a double-tap can't process twice.
@@ -94,7 +95,7 @@ router.post('/api/approve', async (req, res) => {
     console.error('Error in /api/approve', err);
     return res.status(500).json({ error: 'Internal server error' });
   } finally {
-    client.release();
+    if (client) client.release();
   }
 });
 

@@ -32,8 +32,9 @@ router.post('/checkin', async (req, res) => {
     return res.status(400).json({ error: 'latitude/longitude must be numbers' });
   }
 
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     const cleanerResult = await client.query(
       `SELECT c.id AS cleaner_id, c.name AS cleaner_name,
               s.id AS site_id, s.name AS site_name,
@@ -139,9 +140,14 @@ ${approvalUrl}
     });
   } catch (err) {
     console.error('Error in /checkin', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    const isDbConnError = err.code === 'ECONNREFUSED' || !process.env.DATABASE_URL;
+    return res.status(500).json({
+      error: isDbConnError
+        ? 'Database connection failed. Please configure DATABASE_URL in Render environment variables.'
+        : 'Internal server error: ' + err.message,
+    });
   } finally {
-    client.release();
+    if (client) client.release();
   }
 });
 

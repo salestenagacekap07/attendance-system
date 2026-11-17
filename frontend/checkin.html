@@ -94,7 +94,12 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ employee_code, latitude, longitude }),
             });
-            const data = await res.json();
+            let data;
+            try {
+              data = await res.json();
+            } catch (jsonErr) {
+              data = { error: 'Server error (' + res.status + ')' };
+            }
 
             if (!res.ok) {
               showStatus('err', data.error || 'Check-in failed.');
@@ -104,7 +109,7 @@
               showStatus('ok', data.message || 'Checked in. Waiting for PIC approval.');
             }
           } catch (err) {
-            showStatus('err', 'Network error. Please try again.');
+            showStatus('err', err.message || 'Network error. Please try again.');
           } finally {
             btn.disabled = false;
           }
