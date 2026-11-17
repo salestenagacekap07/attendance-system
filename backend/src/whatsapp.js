@@ -74,6 +74,40 @@ function sendText(phoneNumber, text) {
   });
 }
 
+function cleanPhoneNumber(raw) {
+  if (!raw) return '';
+  let digits = String(raw).replace(/\D/g, '');
+  if (digits.startsWith('0')) {
+    digits = '60' + digits.slice(1);
+  }
+  return digits;
+}
+
+/**
+ * Request an 8-character WhatsApp pairing code for a phone number.
+ * @param {string} rawNumber - phone number (e.g. "60123456789" or "0123456789")
+ * @returns {Promise<string>} 8-character pairing code
+ */
+async function requestPairingCode(rawNumber) {
+  if (!sock) {
+    throw new Error('WhatsApp client is initializing. Please wait a few seconds and try again.');
+  }
+  if (isReady || sock.authState?.creds?.registered) {
+    throw new Error('WhatsApp is already registered and connected.');
+  }
+  const cleanNumber = cleanPhoneNumber(rawNumber);
+  if (!cleanNumber || cleanNumber.length < 8) {
+    throw new Error('Please enter a valid phone number with country code (e.g. 60123456789).');
+  }
+
+  const code = await sock.requestPairingCode(cleanNumber);
+  console.log('\n=========================================');
+  console.log(`WhatsApp Pairing Code for ${cleanNumber}: ${code}`);
+  console.log('Enter this code in WhatsApp: Linked Devices > Link a device > Link with phone number instead');
+  console.log('=========================================\n');
+  return code;
+}
+
 async function connectWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
@@ -85,11 +119,22 @@ async function connectWhatsApp() {
 
   sock.ev.on('creds.update', saveCreds);
 
+  // If WHATSAPP_PHONE_NUMBER is configured in environment, auto-request pairing code on startup
+  if (!sock.authState?.creds?.registered && process.env.WHATSAPP_PHONE_NUMBER) {
+    setTimeout(async () => {
+      try {
+        await requestPairingCode(process.env.WHATSAPP_PHONE_NUMBER);
+      } catch (err) {
+        console.error('Auto pairing code request error:', err.message);
+      }
+    }, 5000);
+  }
+
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
 
-    if (qr) {
-      console.log('\nScan this QR code with WhatsApp (Linked Devices > Link a device):\n');
+    if (qr && !process.env.WHATSAPP_PHONE_NUMBER) {
+      console.log('\nScan this QR code with WhatsApp (or use /pair.html to link via phone number):\n');
       qrcode.generate(qr, { small: true });
     }
 
@@ -115,4 +160,9 @@ async function connectWhatsApp() {
   return sock;
 }
 
-module.exports = { connectWhatsApp, sendText, isReady: () => isReady };
+module.exports = {
+  connectWhatsApp,
+  sendText,
+  requestPairingCode,
+  isReady: () => isReady,
+};

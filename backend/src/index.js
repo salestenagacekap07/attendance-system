@@ -6,17 +6,19 @@ const { connectWhatsApp } = require('./whatsapp');
 const checkinRouter = require('./routes/checkin');
 const approveRouter = require('./routes/approve');
 const operationsRouter = require('./routes/operations');
+const pairRouter = require('./routes/pair');
 
 const app = express();
 app.use(express.json());
 
-// Serve the static frontend (checkin.html, approve.html) directly from Express
+// Serve the static frontend (checkin.html, approve.html, pair.html) directly from Express
 // so you don't need a separate web server for this MVP.
 app.use(express.static(path.join(__dirname, '..', '..', 'frontend')));
 
 app.use(checkinRouter);
 app.use(approveRouter);
 app.use(operationsRouter);
+app.use(pairRouter);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 

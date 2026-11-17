@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Link WhatsApp</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 440px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  p.subtitle { color: #666; margin-top: 0; line-height: 1.4; font-size: 0.95rem; }
+  label { display: block; margin-top: 16px; font-weight: 600; font-size: 0.9rem; }
+  input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 6px;
+    font-size: 1.05rem;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+  button {
+    margin-top: 20px;
+    width: 100%;
+    padding: 14px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    background: #16a34a;
+    color: white;
+    cursor: pointer;
+  }
+  button:disabled { background: #999; cursor: not-allowed; }
+  .code-box {
+    margin-top: 24px;
+    padding: 20px;
+    background: #f0fdf4;
+    border: 2px dashed #16a34a;
+    border-radius: 8px;
+    text-align: center;
+  }
+  .code-display {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: 4px;
+    color: #15803d;
+    font-family: monospace;
+    margin: 14px 0;
+  }
+  .instructions {
+    text-align: left;
+    margin-top: 16px;
+    font-size: 0.9rem;
+    color: #374151;
+    line-height: 1.5;
+  }
+  .instructions ol {
+    padding-left: 20px;
+    margin: 8px 0 0;
+  }
+  #status {
+    margin-top: 20px;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    display: none;
+  }
+  #status.ok { background: #dcfce7; color: #166534; display: block; }
+  #status.warn { background: #fef9c3; color: #854d0e; display: block; }
+  #status.err { background: #fee2e2; color: #991b1b; display: block; }
+</style>
+</head>
+<body>
+  <h1>Link WhatsApp</h1>
+  <p class="subtitle">Connect your WhatsApp account using an 8-character pairing code (no camera or QR scanning needed).</p>
+
+  <div id="status"></div>
+
+  <div id="pair-form">
+    <label for="phone">WhatsApp Phone Number</label>
+    <input id="phone" type="tel" placeholder="e.g. 60123456789 or 0123456789" />
+    <button id="btn" type="button">Get Pairing Code</button>
+  </div>
+
+  <div id="code-container" style="display: none;">
+    <div class="code-box">
+      <div style="font-weight: 600; color: #166534;">Your Pairing Code:</div>
+      <div id="pairing-code" class="code-display"></div>
+      <div class="instructions">
+        <strong>How to enter this on your phone:</strong>
+        <ol>
+          <li>Open WhatsApp on your phone</li>
+          <li>Go to <strong>Settings</strong> &gt; <strong>Linked Devices</strong> &gt; <strong>Link a device</strong></li>
+          <li>Tap <strong>Link with phone number instead</strong> at the bottom</li>
+          <li>Type the code shown above</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const phoneInput = document.getElementById('phone');
+    const btn = document.getElementById('btn');
+    const statusDiv = document.getElementById('status');
+    const codeContainer = document.getElementById('code-container');
+    const pairingCodeDiv = document.getElementById('pairing-code');
+
+    let pollInterval = null;
+
+    function showStatus(msg, type) {
+      statusDiv.className = type;
+      statusDiv.textContent = msg;
+    }
+
+    async function checkConnection() {
+      try {
+        const res = await fetch('/api/pair/status');
+        const data = await res.json();
+        if (data.connected) {
+          showStatus('WhatsApp connected successfully! 🎉', 'ok');
+          document.getElementById('pair-form').style.display = 'none';
+          codeContainer.style.display = 'none';
+          if (pollInterval) clearInterval(pollInterval);
+        }
+      } catch (e) {}
+    }
+
+    checkConnection();
+
+    btn.addEventListener('click', async () => {
+      const phoneNumber = phoneInput.value.trim();
+      if (!phoneNumber) {
+        showStatus('Please enter a phone number.', 'err');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Requesting code...';
+      showStatus('Requesting pairing code from WhatsApp...', 'warn');
+
+      try {
+        const res = await fetch('/api/pair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phoneNumber })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to request code');
+        }
+
+        pairingCodeDiv.textContent = data.code;
+        codeContainer.style.display = 'block';
+        showStatus('Pairing code generated! Enter it on your phone within 60 seconds.', 'ok');
+
+        if (!pollInterval) {
+          pollInterval = setInterval(checkConnection, 3000);
+        }
+      } catch (err) {
+        showStatus(err.message, 'err');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Get Pairing Code';
+      }
+    });
+  </script>
+</body>
+</html>
