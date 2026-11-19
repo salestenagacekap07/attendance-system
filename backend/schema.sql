@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS checkins (
     distance_meters DOUBLE PRECISION NOT NULL,
     within_geofence BOOLEAN NOT NULL,
     status checkin_status NOT NULL DEFAULT 'pending',
+    action_type VARCHAR(20) NOT NULL DEFAULT 'time_in',
+    remark TEXT,
     approval_token TEXT UNIQUE NOT NULL,
     pic_id INTEGER REFERENCES pics(id),
     photo_data TEXT,

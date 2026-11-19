@@ -3,50 +3,253 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Approve Check-In</title>
+<title>Attendance Approval</title>
 <style>
   :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    max-width: 420px;
-    margin: 40px auto;
-    padding: 0 20px;
-    text-align: center;
+    max-width: 440px;
+    margin: 24px auto;
+    padding: 0 16px 40px;
+    background: #f8fafc;
+    color: #0f172a;
   }
-  h1 { font-size: 1.3rem; }
-  #details { margin: 20px 0; font-size: 1rem; line-height: 1.6; text-align: left; }
-  #details b { color: #111; }
-  .buttons { display: flex; gap: 12px; margin-top: 24px; }
-  button {
-    flex: 1;
-    padding: 16px;
-    font-size: 1rem;
+  
+  .header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .header h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px 0;
+    font-weight: 700;
+  }
+  .header p {
+    color: #64748b;
+    margin: 0;
+    font-size: 0.9rem;
+  }
+
+  .approval-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+
+  /* Photo display */
+  .photo-container {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .photo-container img {
+    width: 100%;
+    max-height: 280px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    display: block;
+  }
+  .photo-caption {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 6px;
+    font-weight: 500;
+  }
+
+  /* Aligned Key-Value Rows */
+  .info-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.95rem;
+  }
+  .info-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .info-label {
+    color: #64748b;
+    font-weight: 500;
+    flex-shrink: 0;
+    margin-right: 12px;
+  }
+  .info-value {
+    color: #0f172a;
     font-weight: 600;
+    text-align: right;
+    word-break: break-word;
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .badge-in {
+    background: #dcfce7;
+    color: #15803d;
+  }
+  .badge-out {
+    background: #ffedd5;
+    color: #c2410c;
+  }
+  .badge-pending {
+    background: #fef3c7;
+    color: #b45309;
+  }
+  .badge-approved {
+    background: #dcfce7;
+    color: #15803d;
+  }
+  .badge-rejected {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  /* Remark Section */
+  .remark-section {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid #e2e8f0;
+  }
+  .remark-label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 6px;
+    text-align: left;
+  }
+  .remark-hint {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-weight: normal;
+  }
+  .remark-textarea {
+    width: 100%;
+    padding: 12px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #ffffff;
+  }
+  .remark-textarea:focus {
+    border-color: #0284c7;
+  }
+
+  /* Action Buttons */
+  .buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .action-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 15px;
+    font-size: 1.05rem;
+    font-weight: 700;
     border: none;
     border-radius: 8px;
     cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
   }
-  #approveBtn { background: #16a34a; color: white; }
-  #rejectBtn { background: #dc2626; color: white; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .action-btn:active {
+    transform: scale(0.98);
+  }
+  .approve-btn {
+    background: #16a34a;
+    color: white;
+    box-shadow: 0 3px 8px rgba(22, 163, 74, 0.25);
+  }
+  .reject-btn {
+    background: #dc2626;
+    color: white;
+    box-shadow: 0 3px 8px rgba(220, 38, 38, 0.25);
+  }
+  .action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Status Result Box */
   #result {
-    margin-top: 20px;
-    padding: 14px;
-    border-radius: 6px;
-    font-size: 1rem;
+    margin-top: 18px;
+    padding: 16px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    text-align: center;
     display: none;
+    font-weight: 600;
   }
-  #result.ok { background: #dcfce7; color: #166534; display: block; }
-  #result.err { background: #fee2e2; color: #991b1b; display: block; }
+  #result.ok {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+    display: block;
+  }
+  #result.err {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+    display: block;
+  }
+
+  .loading-box {
+    text-align: center;
+    padding: 30px 10px;
+    color: #64748b;
+  }
 </style>
 </head>
 <body>
-  <h1>Attendance Approval</h1>
-  <div id="details">Loading...</div>
+  <div class="header">
+    <h1>Attendance Verification</h1>
+    <p>Review cleaner details, add remark, and verify</p>
+  </div>
 
-  <div class="buttons" id="actionButtons" style="display:none;">
-    <button id="approveBtn">✅ Approve</button>
-    <button id="rejectBtn">❌ Reject</button>
+  <div class="approval-card" id="cardContainer">
+    <div id="details" class="loading-box">Loading check-in details...</div>
+
+    <!-- Remark Area (shown only when pending) -->
+    <div class="remark-section" id="remarkSection" style="display: none;">
+      <label for="remarkInput" class="remark-label">
+        PIC Remark <span class="remark-hint">(Optional)</span>
+      </label>
+      <textarea id="remarkInput" class="remark-textarea" rows="2" placeholder="e.g. Uniform complete, late with reason, etc."></textarea>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="buttons" id="actionButtons" style="display: none;">
+      <button type="button" class="action-btn approve-btn" id="approveBtn">
+        <span>✅</span> Approve
+      </button>
+      <button type="button" class="action-btn reject-btn" id="rejectBtn">
+        <span>❌</span> Reject
+      </button>
+    </div>
   </div>
 
   <div id="result"></div>
@@ -55,82 +258,140 @@
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     const detailsEl = document.getElementById('details');
+    const remarkSection = document.getElementById('remarkSection');
+    const remarkInput = document.getElementById('remarkInput');
     const actionButtons = document.getElementById('actionButtons');
+    const approveBtn = document.getElementById('approveBtn');
+    const rejectBtn = document.getElementById('rejectBtn');
     const resultEl = document.getElementById('result');
 
     function showResult(type, text) {
       resultEl.className = type;
       resultEl.textContent = text;
+      resultEl.style.display = 'block';
+    }
+
+    function formatTime(isoStr) {
+      if (!isoStr) return '—';
+      return new Date(isoStr).toLocaleString('en-MY', {
+        timeZone: 'Asia/Kuala_Lumpur',
+        dateStyle: 'medium',
+        timeStyle: 'short'
+      });
     }
 
     async function loadDetails() {
       if (!token) {
-        detailsEl.textContent = 'Missing link token.';
+        detailsEl.innerHTML = '<div style="color:#dc2626;">Missing approval link token.</div>';
         return;
       }
+
       try {
         const res = await fetch(`/api/checkin-info?token=${encodeURIComponent(token)}`);
         const data = await res.json();
 
         if (!res.ok) {
-          detailsEl.textContent = data.error || 'Invalid or expired link.';
+          detailsEl.innerHTML = `<div style="color:#dc2626;">${data.error || 'Invalid or expired link.'}</div>`;
           return;
         }
 
+        const isTimeOut = data.action_type === 'time_out';
+        const actionBadge = isTimeOut
+          ? '<span class="badge badge-out">🔴 Time Out</span>'
+          : '<span class="badge badge-in">🟢 Time In</span>';
+
+        let statusBadge = '<span class="badge badge-pending">Pending Approval</span>';
+        if (data.status === 'approved') statusBadge = '<span class="badge badge-approved">Approved ✅</span>';
+        if (data.status === 'rejected') statusBadge = '<span class="badge badge-rejected">Rejected ❌</span>';
+
         detailsEl.innerHTML = `
           ${data.photo_data ? `
-            <div style="margin-bottom: 16px; text-align: center;">
-              <img src="${data.photo_data}" style="width: 100%; max-height: 280px; object-fit: cover; border-radius: 8px; border: 2px solid #e2e8f0; box-shadow: 0 2px 6px rgba(0,0,0,0.08);" alt="Cleaner Live Photo" />
-              <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">Live Verification Photo</div>
+            <div class="photo-container">
+              <img src="${data.photo_data}" alt="Cleaner Verification Photo" />
+              <div class="photo-caption">📸 Live Selfie Verification</div>
             </div>
           ` : ''}
-          <div><b>Cleaner:</b> ${data.cleaner_name}</div>
-          <div><b>Site:</b> ${data.site_name}</div>
-          <div><b>Time:</b> ${new Date(data.created_at).toLocaleString()}</div>
-          <div><b>Distance from site:</b> ${Math.round(data.distance_meters)}m</div>
-          <div><b>Status:</b> ${data.status}</div>
+
+          <div class="info-list">
+            <div class="info-row">
+              <span class="info-label">Action</span>
+              <span class="info-value">${actionBadge}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Cleaner</span>
+              <span class="info-value">${data.cleaner_name} ${data.employee_code ? `(${data.employee_code})` : ''}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Site</span>
+              <span class="info-value">${data.site_name}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Timestamp</span>
+              <span class="info-value">${formatTime(data.created_at)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">GPS Distance</span>
+              <span class="info-value">${Math.round(data.distance_meters)}m from site</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Status</span>
+              <span class="info-value">${statusBadge}</span>
+            </div>
+            ${data.remark ? `
+              <div class="info-row">
+                <span class="info-label">PIC Remark</span>
+                <span class="info-value" style="font-weight: normal; color: #475569; font-style: italic;">"${data.remark}"</span>
+              </div>
+            ` : ''}
+          </div>
         `;
 
         if (data.status === 'pending') {
+          remarkSection.style.display = 'block';
           actionButtons.style.display = 'flex';
         } else {
-          showResult('ok', `This check-in was already ${data.status}.`);
+          showResult('ok', `This record has already been ${data.status}.`);
         }
       } catch (err) {
-        detailsEl.textContent = 'Network error loading check-in.';
+        detailsEl.innerHTML = '<div style="color:#dc2626;">Network error loading check-in details.</div>';
       }
     }
 
     async function decide(decision) {
-      document.getElementById('approveBtn').disabled = true;
-      document.getElementById('rejectBtn').disabled = true;
+      approveBtn.disabled = true;
+      rejectBtn.disabled = true;
+      const remark = remarkInput.value.trim();
 
       try {
         const res = await fetch('/api/approve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, decision }),
+          body: JSON.stringify({ token, decision, remark }),
         });
         const data = await res.json();
 
         if (!res.ok) {
           showResult('err', data.error || 'Action failed.');
-          document.getElementById('approveBtn').disabled = false;
-          document.getElementById('rejectBtn').disabled = false;
+          approveBtn.disabled = false;
+          rejectBtn.disabled = false;
           return;
         }
 
+        remarkSection.style.display = 'none';
         actionButtons.style.display = 'none';
-        showResult('ok', `${data.cleaner_name} marked as ${data.status}.`);
+        showResult('ok', `Success: ${data.cleaner_name} has been marked as ${data.status.toUpperCase()}! ${remark ? `(Remark: "${remark}")` : ''}`);
+        
+        // Reload details to display updated status
+        setTimeout(loadDetails, 1200);
       } catch (err) {
         showResult('err', 'Network error. Please try again.');
-        document.getElementById('approveBtn').disabled = false;
-        document.getElementById('rejectBtn').disabled = false;
+        approveBtn.disabled = false;
+        rejectBtn.disabled = false;
       }
     }
 
-    document.getElementById('approveBtn').addEventListener('click', () => decide('approved'));
-    document.getElementById('rejectBtn').addEventListener('click', () => decide('rejected'));
+    approveBtn.addEventListener('click', () => decide('approved'));
+    rejectBtn.addEventListener('click', () => decide('rejected'));
 
     loadDetails();
   </script>

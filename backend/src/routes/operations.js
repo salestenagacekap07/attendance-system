@@ -1,5 +1,5 @@
 const express = require('express');
-const db = require('../db');
+const { pool } = require('../db');
 
 const router = express.Router();
 
@@ -14,29 +14,61 @@ function normalizeWhatsAppNumber(raw) {
   return digits;
 }
 
+// 1. Clients
 router.get('/api/operations/clients', async function (_req, res) {
   try {
-    return res.json(db.listClients());
+    const { rows } = await pool.query('SELECT id, name FROM clients ORDER BY name ASC');
+    return res.json(rows);
   } catch (error) {
     console.error('Error in /api/operations/clients', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+// 2. Sites
 router.get('/api/operations/sites', async function (req, res) {
   try {
     const { client_id } = req.query;
-    return res.json(db.listSites(client_id || null));
+    let query = 'SELECT s.id, s.name, s.client_id, s.radius_meters, c.name AS client_name FROM sites s LEFT JOIN clients c ON c.id = s.client_id';
+    const params = [];
+    if (client_id) {
+      query += ' WHERE s.client_id = $1';
+      params.push(client_id);
+    }
+    query += ' ORDER BY s.name ASC';
+    const { rows } = await pool.query(query, params);
+    return res.json(rows);
   } catch (error) {
     console.error('Error in /api/operations/sites', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+// 3. PICs
 router.get('/api/operations/pics', async function (req, res) {
   try {
     const { client_id, site_id } = req.query;
-    return res.json(db.listPics(client_id || null, site_id || null));
+    let query = `
+      SELECT p.id, p.site_id, p.name, p.whatsapp_number,
+             s.name AS site_name, s.client_id,
+             c.name AS client_name
+      FROM pics p
+      JOIN sites s ON s.id = p.site_id
+      LEFT JOIN clients c ON c.id = s.client_id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (client_id) {
+      params.push(client_id);
+      query += ` AND s.client_id = $${params.length}`;
+    }
+    if (site_id) {
+      params.push(site_id);
+      query += ` AND p.site_id = $${params.length}`;
+    }
+    query += ' ORDER BY p.id ASC';
+    const { rows } = await pool.query(query, params);
+    return res.json(rows);
   } catch (error) {
     console.error('Error in /api/operations/pics', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -56,8 +88,11 @@ router.post('/api/operations/pics', async function (req, res) {
       return res.status(400).json({ error: 'whatsapp_number is invalid' });
     }
 
-    const pic = db.createPic({ site_id, name, whatsapp_number: normalized });
-    return res.status(201).json(pic);
+    const { rows } = await pool.query(
+      `INSERT INTO pics (site_id, name, whatsapp_number) VALUES ($1, $2, $3) RETURNING *`,
+      [site_id, name.trim(), normalized]
+    );
+    return res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Error creating PIC', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -78,12 +113,19 @@ router.put('/api/operations/pics/:id', async function (req, res) {
       return res.status(400).json({ error: 'whatsapp_number is invalid' });
     }
 
-    const updated = db.updatePic(id, { site_id, name, whatsapp_number: normalized });
-    if (!updated) {
+    const { rows } = await pool.query(
+      `UPDATE pics
+       SET name = $1, whatsapp_number = $2, site_id = COALESCE($3, site_id)
+       WHERE id = $4
+       RETURNING *`,
+      [name.trim(), normalized, site_id || null, id]
+    );
+
+    if (rows.length === 0) {
       return res.status(404).json({ error: 'PIC not found' });
     }
 
-    return res.json(updated);
+    return res.json(rows[0]);
   } catch (error) {
     console.error('Error updating PIC', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -93,8 +135,8 @@ router.put('/api/operations/pics/:id', async function (req, res) {
 router.delete('/api/operations/pics/:id', async function (req, res) {
   try {
     const { id } = req.params;
-    const ok = db.deletePic(id);
-    if (!ok) {
+    const { rowCount } = await pool.query('DELETE FROM pics WHERE id = $1', [id]);
+    if (rowCount === 0) {
       return res.status(404).json({ error: 'PIC not found' });
     }
     return res.json({ ok: true });
@@ -104,31 +146,83 @@ router.delete('/api/operations/pics/:id', async function (req, res) {
   }
 });
 
+// 4. Summary metrics
 router.get('/api/operations/summary', async function (req, res) {
   try {
-    return res.json(db.getSummary({
-      client_id: req.query.client_id || null,
-      site_id: req.query.site_id || null,
-      status: req.query.status || null,
-      date: req.query.date || null
-    }));
+    const [clientsRes, sitesRes, cleanersRes, checkinsRes] = await Promise.all([
+      pool.query('SELECT COUNT(*)::int AS count FROM clients'),
+      pool.query('SELECT COUNT(*)::int AS count FROM sites'),
+      pool.query('SELECT COUNT(*)::int AS count FROM cleaners'),
+      pool.query(`
+        SELECT
+          COUNT(*)::int AS total_checkins,
+          COUNT(*) FILTER (WHERE status = 'pending')::int AS pending_count,
+          COUNT(*) FILTER (WHERE status = 'approved')::int AS approved_count,
+          COUNT(*) FILTER (WHERE status = 'rejected')::int AS rejected_count
+        FROM checkins
+      `),
+    ]);
+
+    return res.json({
+      client_count: clientsRes.rows[0].count,
+      site_count: sitesRes.rows[0].count,
+      cleaner_count: cleanersRes.rows[0].count,
+      total_checkins: checkinsRes.rows[0].total_checkins,
+      pending_count: checkinsRes.rows[0].pending_count,
+      approved_count: checkinsRes.rows[0].approved_count,
+      rejected_count: checkinsRes.rows[0].rejected_count,
+    });
   } catch (error) {
     console.error('Error in /api/operations/summary', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+// 5. Attendance Records List (for Ops daily sheet)
 router.get('/api/operations/attendance', async function (req, res) {
   try {
-    return res.json({
-      rows: db.getAttendance({
-        client_id: req.query.client_id || null,
-        site_id: req.query.site_id || null,
-        status: req.query.status || null,
-        date: req.query.date || null,
-        search: req.query.search || null
-      })
-    });
+    const { client_id, site_id, status, date, search } = req.query;
+    let query = `
+      SELECT ci.id, ci.cleaner_id, ci.site_id, ci.status, ci.action_type, ci.remark,
+             ci.distance_meters, ci.created_at, ci.decided_at,
+             cl.name AS cleaner_name, cl.employee_code,
+             s.name AS site_name, s.client_id,
+             c.name AS client_name,
+             p.name AS pic_name
+      FROM checkins ci
+      JOIN cleaners cl ON cl.id = ci.cleaner_id
+      JOIN sites s ON s.id = ci.site_id
+      LEFT JOIN clients c ON c.id = s.client_id
+      LEFT JOIN pics p ON p.id = ci.pic_id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (client_id) {
+      params.push(client_id);
+      query += ` AND s.client_id = $${params.length}`;
+    }
+    if (site_id) {
+      params.push(site_id);
+      query += ` AND ci.site_id = $${params.length}`;
+    }
+    if (status) {
+      params.push(status);
+      query += ` AND ci.status = $${params.length}`;
+    }
+    if (date) {
+      params.push(date);
+      query += ` AND DATE(ci.created_at AT TIME ZONE 'Asia/Kuala_Lumpur') = $${params.length}::date`;
+    }
+    if (search) {
+      params.push(`%${search.trim()}%`);
+      query += ` AND (cl.name ILIKE $${params.length} OR cl.employee_code ILIKE $${params.length} OR s.name ILIKE $${params.length})`;
+    }
+
+    query += ' ORDER BY ci.created_at DESC LIMIT 200';
+
+    const { rows } = await pool.query(query, params);
+    return res.json({ rows });
   } catch (error) {
     console.error('Error in /api/operations/attendance', error);
     return res.status(500).json({ error: 'Internal server error' });

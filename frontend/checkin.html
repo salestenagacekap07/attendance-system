@@ -3,19 +3,57 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Cleaner Check-In</title>
+<title>Cleaner Attendance - Clock In / Out</title>
 <style>
   :root { color-scheme: light dark; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     max-width: 440px;
-    margin: 30px auto;
-    padding: 0 20px 40px;
+    margin: 24px auto;
+    padding: 0 16px 40px;
   }
-  h1 { font-size: 1.5rem; margin-bottom: 4px; }
-  p.subtitle { color: #64748b; margin-top: 0; font-size: 0.95rem; }
+  h1 { font-size: 1.5rem; margin-bottom: 4px; text-align: center; }
+  p.subtitle { color: #64748b; margin-top: 0; font-size: 0.95rem; text-align: center; }
   
-  label { display: block; margin-top: 18px; font-weight: 600; font-size: 0.9rem; }
+  label { display: block; margin-top: 16px; font-weight: 600; font-size: 0.9rem; }
+
+  /* Attendance Type Toggle */
+  .action-toggle {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+  }
+  .toggle-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 14px;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .toggle-btn.active[data-type="time_in"] {
+    background: #16a34a;
+    color: white;
+    box-shadow: 0 2px 6px rgba(22, 163, 74, 0.3);
+  }
+  .toggle-btn.active[data-type="time_out"] {
+    background: #ea580c;
+    color: white;
+    box-shadow: 0 2px 6px rgba(234, 88, 12, 0.3);
+  }
+
   input[type="text"] {
     width: 100%;
     padding: 14px;
@@ -25,6 +63,7 @@
     border: 2px solid #cbd5e1;
     border-radius: 8px;
     outline: none;
+    transition: border-color 0.2s;
   }
   input[type="text"]:focus {
     border-color: #16a34a;
@@ -82,7 +121,7 @@
     font-weight: 600;
   }
 
-  #checkinBtn {
+  #submitBtn {
     margin-top: 24px;
     width: 100%;
     padding: 16px;
@@ -96,14 +135,18 @@
     box-shadow: 0 4px 10px rgba(22, 163, 74, 0.25);
     transition: all 0.2s ease;
   }
-  #checkinBtn.loading {
+  #submitBtn.timeout-mode {
+    background: #ea580c;
+    box-shadow: 0 4px 10px rgba(234, 88, 12, 0.25);
+  }
+  #submitBtn.loading {
     background: #0284c7;
     cursor: wait;
   }
-  #checkinBtn.success {
+  #submitBtn.success {
     background: #16a34a;
   }
-  #checkinBtn.failed {
+  #submitBtn.failed {
     background: #dc2626;
     box-shadow: 0 4px 10px rgba(220, 38, 38, 0.25);
   }
@@ -169,14 +212,24 @@
 </style>
 </head>
 <body>
-  <h1>Cleaner Check-In</h1>
-  <p class="subtitle">Enter your employee code, snap a selfie at your site, and tap Check In.</p>
+  <h1>Cleaner Attendance</h1>
+  <p class="subtitle">Select Time In or Time Out, take your live selfie, and clock in.</p>
 
-  <form id="checkinForm" onsubmit="return false;">
-    <label for="employee_code">Employee Code</label>
+  <form id="attendanceForm" onsubmit="return false;">
+    <label>1. Select Option</label>
+    <div class="action-toggle" role="group" aria-label="Attendance Type">
+      <button type="button" class="toggle-btn active" id="timeInBtn" data-type="time_in">
+        <span>🟢</span> Time In
+      </button>
+      <button type="button" class="toggle-btn" id="timeOutBtn" data-type="time_out">
+        <span>🔴</span> Time Out
+      </button>
+    </div>
+
+    <label for="employee_code">2. Employee Code</label>
     <input id="employee_code" type="text" placeholder="e.g. CL01" autocomplete="off" />
 
-    <label>Live Photo Verification</label>
+    <label>3. Live Selfie Verification</label>
     <div class="photo-section" id="photoSection">
       <input id="photoInput" type="file" accept="image/*" capture="user" style="display: none;" />
       <button type="button" class="camera-btn" id="takePhotoBtn">📸 Take Live Selfie</button>
@@ -186,7 +239,7 @@
         <span class="photo-badge">Selfie Ready ✅</span>
       </div>
       <div id="photoWarning" style="color:#dc2626; font-size:0.85rem; margin-top:8px; display:none; font-weight:600;">
-        ⚠️ Please snap a selfie photo before checking in!
+        ⚠️ Please snap a selfie photo before submitting!
       </div>
     </div>
 
@@ -198,11 +251,14 @@
       <div id="resultAction"></div>
     </div>
 
-    <button id="checkinBtn" type="button">Check In</button>
+    <button id="submitBtn" type="button">Clock In (Time In) 🟢</button>
   </form>
 
   <script>
-    const btn = document.getElementById('checkinBtn');
+    let currentActionType = 'time_in'; // 'time_in' or 'time_out'
+    const timeInBtn = document.getElementById('timeInBtn');
+    const timeOutBtn = document.getElementById('timeOutBtn');
+    const submitBtn = document.getElementById('submitBtn');
     const employeeCodeInput = document.getElementById('employee_code');
     const takePhotoBtn = document.getElementById('takePhotoBtn');
     const photoInput = document.getElementById('photoInput');
@@ -218,6 +274,25 @@
     const resultAction = document.getElementById('resultAction');
 
     let capturedPhotoBase64 = null;
+
+    function setActionType(type) {
+      currentActionType = type;
+      if (type === 'time_in') {
+        timeInBtn.classList.add('active');
+        timeOutBtn.classList.remove('active');
+        submitBtn.classList.remove('timeout-mode');
+        submitBtn.textContent = 'Clock In (Time In) 🟢';
+      } else {
+        timeOutBtn.classList.add('active');
+        timeInBtn.classList.remove('active');
+        submitBtn.classList.add('timeout-mode');
+        submitBtn.textContent = 'Clock Out (Time Out) 🔴';
+      }
+      resultCard.style.display = 'none';
+    }
+
+    timeInBtn.addEventListener('click', () => setActionType('time_in'));
+    timeOutBtn.addEventListener('click', () => setActionType('time_out'));
 
     takePhotoBtn.addEventListener('click', () => {
       photoInput.click();
@@ -278,7 +353,6 @@
         navigator.geolocation.getCurrentPosition(
           (pos) => resolve(pos.coords),
           () => {
-            // Fallback to low-accuracy network triangulation if high-accuracy GPS satellite hangs indoors
             navigator.geolocation.getCurrentPosition(
               (pos) => resolve(pos.coords),
               (err2) => {
@@ -297,16 +371,18 @@
     }
 
     function showSuccess(data, code) {
-      btn.className = 'success';
-      btn.textContent = 'Checked in ! ✅';
-      btn.disabled = false;
+      const isOut = currentActionType === 'time_out';
+      submitBtn.className = 'success';
+      submitBtn.textContent = isOut ? 'Clocked Out ! ✅' : 'Clocked In ! ✅';
+      submitBtn.disabled = false;
 
       resultCard.className = 'result-card ok';
       resultIcon.textContent = '🎉';
-      resultTitle.textContent = 'Checked in ! ✅';
+      resultTitle.textContent = isOut ? 'Time Out Recorded ! ✅' : 'Time In Recorded ! ✅';
       
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       resultBody.innerHTML = `
+        <strong>Action:</strong> ${isOut ? 'Time Out 🔴' : 'Time In 🟢'}<br>
         <strong>Cleaner:</strong> ${data.cleaner_name || code}<br>
         <strong>Site:</strong> ${data.site_name || 'Assigned Site'}<br>
         <strong>Time:</strong> ${timeStr}<br>
@@ -316,25 +392,26 @@
       `;
 
       resultAction.innerHTML = `
-        <button type="button" class="reset-btn" onclick="resetForm()">Check In Another Cleaner</button>
+        <button type="button" class="reset-btn" onclick="resetForm()">Clock In / Out Another Cleaner</button>
       `;
       resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     function showFailure(message) {
-      btn.className = 'failed';
-      btn.textContent = 'Check-in Failed — Retry 🔄';
-      btn.disabled = false;
+      const isOut = currentActionType === 'time_out';
+      submitBtn.className = 'failed';
+      submitBtn.textContent = `${isOut ? 'Time Out' : 'Time In'} Failed — Retry 🔄`;
+      submitBtn.disabled = false;
 
       resultCard.className = 'result-card err';
       resultIcon.textContent = '❌';
-      resultTitle.textContent = 'Check-in Failed';
+      resultTitle.textContent = `${isOut ? 'Time Out' : 'Time In'} Failed`;
       resultBody.innerHTML = `
         <div style="font-weight:600; margin-bottom:4px;">${message}</div>
-        <div style="font-size:0.85rem; color:#7f1d1d;">Please verify your code, selfie, or distance and tap retry.</div>
+        <div style="font-size:0.85rem; color:#7f1d1d;">Please verify your code, selfie, or location and tap retry.</div>
       `;
       resultAction.innerHTML = `
-        <button type="button" class="retry-btn" onclick="handleCheckIn()">Retry Check-in 🔄</button>
+        <button type="button" class="retry-btn" onclick="handleSubmit()">Retry 🔄</button>
       `;
       resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
@@ -345,12 +422,11 @@
       photoPreviewContainer.style.display = 'none';
       takePhotoBtn.textContent = '📸 Take Live Selfie';
       resultCard.style.display = 'none';
-      btn.className = '';
-      btn.textContent = 'Check In';
-      btn.disabled = false;
+      setActionType(currentActionType);
+      submitBtn.disabled = false;
     }
 
-    async function handleCheckIn() {
+    async function handleSubmit() {
       const code = employeeCodeInput.value.trim();
       if (!code) {
         showFailure('Please enter your Employee Code.');
@@ -366,9 +442,9 @@
       }
 
       // Set loading state
-      btn.className = 'loading';
-      btn.textContent = 'Checking in... ⏳';
-      btn.disabled = true;
+      submitBtn.className = 'loading';
+      submitBtn.textContent = 'Submitting attendance... ⏳';
+      submitBtn.disabled = true;
       resultCard.style.display = 'none';
 
       let coords;
@@ -385,6 +461,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             employee_code: code,
+            action_type: currentActionType,
             latitude: coords.latitude,
             longitude: coords.longitude,
             photo: capturedPhotoBase64
@@ -399,7 +476,7 @@
         }
 
         if (!res.ok) {
-          showFailure(data.error || 'Check-in failed. Please retry.');
+          showFailure(data.error || 'Attendance submission failed. Please retry.');
         } else {
           showSuccess(data, code);
         }
@@ -408,7 +485,7 @@
       }
     }
 
-    btn.addEventListener('click', handleCheckIn);
+    submitBtn.addEventListener('click', handleSubmit);
   </script>
 </body>
 </html>

@@ -113,7 +113,7 @@
         <div style='overflow:auto;'>
           <table>
             <thead>
-              <tr><th>Cleaner</th><th>Employee Code</th><th>Client</th><th>Site</th><th>Time</th><th>Status</th><th>Distance</th><th>PIC</th></tr>
+              <tr><th>Cleaner</th><th>Code</th><th>Type</th><th>Site</th><th>Time</th><th>Status</th><th>Distance</th><th>PIC</th><th>Remark</th></tr>
             </thead>
             <tbody id='attendanceBody'></tbody>
           </table>
@@ -166,17 +166,21 @@
       }
       function renderRows(rows) {
         if (!rows.length) {
-          attendanceBody.innerHTML = '<tr><td colspan='8' style='padding:20px; color:#64748b;'>No attendance records found.</td></tr>';
+          attendanceBody.innerHTML = '<tr><td colspan="9" style="padding:20px; color:#64748b;">No attendance records found.</td></tr>';
           return;
         }
         attendanceBody.innerHTML = rows.map(function (row) {
           var cleanerName = row.cleaner_name || '—';
           var employeeCode = row.employee_code || '—';
-          var clientName = row.client_name || '—';
           var siteName = row.site_name || '—';
           var picName = row.pic_name || '—';
           var distance = row.distance_meters ? (Math.round(row.distance_meters) + 'm') : '—';
-          return '<tr><td><strong>' + cleanerName + '</strong></td><td>' + employeeCode + '</td><td>' + clientName + '</td><td>' + siteName + '</td><td>' + formatDate(row.created_at) + '</td><td><span class='status-badge ' + badgeClass(row.status) + ''>' + (row.status || 'pending') + '</span></td><td>' + distance + '</td><td>' + picName + '</td></tr>';
+          var isOut = row.action_type === 'time_out';
+          var typeBadge = isOut
+            ? '<span style="color:#c2410c; background:#ffedd5; padding:3px 8px; border-radius:12px; font-weight:700; font-size:11px;">🔴 Time Out</span>'
+            : '<span style="color:#15803d; background:#dcfce7; padding:3px 8px; border-radius:12px; font-weight:700; font-size:11px;">🟢 Time In</span>';
+          var remarkText = row.remark ? ('<span style="font-style:italic; font-size:12px; color:#334155;">' + row.remark + '</span>') : '<span style="color:#94a3b8;">—</span>';
+          return '<tr><td><strong>' + cleanerName + '</strong></td><td>' + employeeCode + '</td><td>' + typeBadge + '</td><td>' + siteName + '</td><td>' + formatDate(row.created_at) + '</td><td><span class="status-badge ' + badgeClass(row.status) + '">' + (row.status || 'pending') + '</span></td><td>' + distance + '</td><td>' + picName + '</td><td>' + remarkText + '</td></tr>';
         }).join('');
       }
       async function loadClients() {

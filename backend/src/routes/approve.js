@@ -16,7 +16,8 @@ router.get('/api/checkin-info', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT ci.id, ci.status, ci.created_at, ci.distance_meters, ci.photo_data,
-              cl.name AS cleaner_name, s.name AS site_name
+              ci.action_type, ci.remark,
+              cl.name AS cleaner_name, cl.employee_code, s.name AS site_name
        FROM checkins ci
        JOIN cleaners cl ON cl.id = ci.cleaner_id
        JOIN sites s ON s.id = ci.site_id
@@ -42,11 +43,13 @@ router.get('/api/checkin-info', async (req, res) => {
  * Single-use: a token can only move a checkin out of "pending" once.
  */
 router.post('/api/approve', async (req, res) => {
-  const { token, decision } = req.body;
+  const { token, decision, remark } = req.body;
 
   if (!token || !['approved', 'rejected'].includes(decision)) {
     return res.status(400).json({ error: 'token and decision ("approved"|"rejected") are required' });
   }
+
+  const cleanRemark = typeof remark === 'string' && remark.trim().length > 0 ? remark.trim() : null;
 
   let client;
   try {
@@ -77,10 +80,10 @@ router.post('/api/approve', async (req, res) => {
 
     const updated = await client.query(
       `UPDATE checkins
-       SET status = $1, decided_at = now()
-       WHERE id = $2
-       RETURNING id, status, decided_at`,
-      [decision, checkin.id]
+       SET status = $1, remark = $2, decided_at = now()
+       WHERE id = $3
+       RETURNING id, status, remark, decided_at`,
+      [decision, cleanRemark, checkin.id]
     );
 
     await client.query('COMMIT');
@@ -89,6 +92,7 @@ router.post('/api/approve', async (req, res) => {
       checkin_id: updated.rows[0].id,
       status: updated.rows[0].status,
       cleaner_name: checkin.cleaner_name,
+      remark: updated.rows[0].remark,
     });
   } catch (err) {
     await client.query('ROLLBACK');

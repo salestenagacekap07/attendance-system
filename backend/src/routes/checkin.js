@@ -19,6 +19,9 @@ const router = express.Router();
  */
 router.post('/checkin', async (req, res) => {
   const { employee_code, latitude, longitude, photo } = req.body;
+  const action_type = (req.body.action_type || req.body.type || 'time_in').toLowerCase() === 'time_out' ? 'time_out' : 'time_in';
+  const typeText = action_type === 'time_out' ? 'Time Out' : 'Time In';
+  const typeLabel = action_type === 'time_out' ? 'TIME OUT 🔴' : 'TIME IN 🟢';
 
   if (!employee_code || latitude === undefined || longitude === undefined) {
     return res.status(400).json({ error: 'employee_code, latitude, longitude are required' });
@@ -65,10 +68,10 @@ router.post('/checkin', async (req, res) => {
 
     const insertResult = await client.query(
       `INSERT INTO checkins
-         (cleaner_id, site_id, latitude, longitude, distance_meters, within_geofence, status, approval_token, pic_id, photo_data)
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9)
+         (cleaner_id, site_id, latitude, longitude, distance_meters, within_geofence, status, approval_token, pic_id, photo_data, action_type)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10)
        RETURNING id, created_at`,
-      [cleaner.cleaner_id, cleaner.site_id, lat, lon, dist, within, token, pics.length > 0 ? pics[0].id : null, photo]
+      [cleaner.cleaner_id, cleaner.site_id, lat, lon, dist, within, token, pics.length > 0 ? pics[0].id : null, photo, action_type]
     );
 
     const checkinId = insertResult.rows[0].id;
@@ -76,37 +79,32 @@ router.post('/checkin', async (req, res) => {
     if (!within) {
       return res.status(400).json({
         checkin_id: checkinId,
+        action_type,
         status: 'pending',
         within_geofence: false,
         distance_meters: Math.round(dist),
-        error: `Check-in Failed: You are ${Math.round(dist)}m from ${cleaner.site_name}, outside the allowed ${cleaner.radius_meters}m range. Please move closer and retry.`,
+        error: `${typeText} Failed: You are ${Math.round(dist)}m from ${cleaner.site_name}, outside the allowed ${cleaner.radius_meters}m range. Please move closer and retry.`,
       });
     }
 
     if (pics.length === 0) {
       return res.status(200).json({
         checkin_id: checkinId,
+        action_type,
         status: 'pending',
         within_geofence: true,
-        message: 'Checked in, but no PIC is configured for this site yet — approval could not be requested.',
+        message: `${typeText} recorded, but no PIC is configured for this site yet — approval could not be requested.`,
       });
     }
 
     const approvalUrl = `${process.env.PUBLIC_BASE_URL}/approve.html?token=${token}`;
     const message =
-      `Attendance approval needed
-` +
-      `Cleaner: ${cleaner.cleaner_name}
-` +
-      `Site: ${cleaner.site_name}
-` +
-      `Time: ${new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}
-
-` +
-      `Approve or reject here:
-${approvalUrl}
-
-` +
+      `Attendance approval needed [${typeLabel}]\n` +
+      `Cleaner: ${cleaner.cleaner_name}\n` +
+      `Action: ${typeText}\n` +
+      `Site: ${cleaner.site_name}\n` +
+      `Time: ${new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}\n\n` +
+      `Approve or reject here:\n${approvalUrl}\n\n` +
       `This link expires once used.`;
 
     let sentCount = 0;
@@ -125,25 +123,27 @@ ${approvalUrl}
     if (sentCount === 0) {
       return res.status(200).json({
         checkin_id: checkinId,
+        action_type,
         status: 'pending',
         within_geofence: true,
         site_name: cleaner.site_name,
         cleaner_name: cleaner.cleaner_name,
-        warning: 'Checked in, but WhatsApp alert to PIC could not be sent (WhatsApp bot offline).',
-        message: `Checked in at ${cleaner.site_name}! (Attendance saved in system).`,
+        warning: `${typeText} recorded, but WhatsApp alert to PIC could not be sent (WhatsApp bot offline).`,
+        message: `${typeText} at ${cleaner.site_name}! (Attendance saved in system).`,
         error: firstError ? String(firstError) : undefined,
       });
     }
 
     return res.status(200).json({
       checkin_id: checkinId,
+      action_type,
       status: 'pending',
       within_geofence: true,
       distance_meters: Math.round(dist),
       sent_to_pics: sentCount,
       site_name: cleaner.site_name,
       cleaner_name: cleaner.cleaner_name,
-      message: `Checked in at ${cleaner.site_name}! Sent to PIC for approval.`,
+      message: `${typeText} at ${cleaner.site_name}! Sent to PIC for approval.`,
     });
   } catch (err) {
     console.error('Error in /checkin', err);
