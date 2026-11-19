@@ -44,13 +44,31 @@ async function processQueue() {
   queueRunning = true;
 
   while (outgoingQueue.length > 0) {
-    const { jid, text, resolve, reject } = outgoingQueue.shift();
+    const { jid, text, image, resolve, reject } = outgoingQueue.shift();
     try {
       if (!isReady || !sock) {
         throw new Error('WhatsApp socket is not connected yet');
       }
-      await sock.sendMessage(jid, { text });
-      resolve(true);
+      if (image) {
+        try {
+          let buffer;
+          if (Buffer.isBuffer(image)) {
+            buffer = image;
+          } else if (typeof image === 'string') {
+            const cleanBase64 = image.replace(/^data:image\/\w+;base64,/, '');
+            buffer = Buffer.from(cleanBase64, 'base64');
+          }
+          await sock.sendMessage(jid, { image: buffer, caption: text });
+          resolve(true);
+        } catch (imgErr) {
+          console.warn('Failed to send photo over WhatsApp, falling back to text:', imgErr.message);
+          await sock.sendMessage(jid, { text });
+          resolve(true);
+        }
+      } else {
+        await sock.sendMessage(jid, { text });
+        resolve(true);
+      }
     } catch (err) {
       reject(err);
     }
@@ -62,16 +80,21 @@ async function processQueue() {
 }
 
 /**
- * Queue a plain-text WhatsApp message to a phone number.
+ * Queue a WhatsApp message with optional image to a phone number.
  * @param {string} phoneNumber - digits only, with country code, e.g. "60123456789"
  * @param {string} text
+ * @param {string|Buffer|null} image - optional base64 string or Buffer
  */
-function sendText(phoneNumber, text) {
+function sendNotification(phoneNumber, text, image = null) {
   const jid = `${phoneNumber.replace(/[^\d]/g, '')}@s.whatsapp.net`;
   return new Promise((resolve, reject) => {
-    outgoingQueue.push({ jid, text, resolve, reject });
+    outgoingQueue.push({ jid, text, image, resolve, reject });
     processQueue();
   });
+}
+
+function sendText(phoneNumber, text) {
+  return sendNotification(phoneNumber, text, null);
 }
 
 function cleanPhoneNumber(raw) {
@@ -163,6 +186,7 @@ async function connectWhatsApp() {
 module.exports = {
   connectWhatsApp,
   sendText,
+  sendNotification,
   requestPairingCode,
   isReady: () => isReady,
 };

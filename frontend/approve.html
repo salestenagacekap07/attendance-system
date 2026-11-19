@@ -78,6 +78,12 @@
         }
 
         detailsEl.innerHTML = `
+          ${data.photo_data ? `
+            <div style="margin-bottom: 16px; text-align: center;">
+              <img src="${data.photo_data}" style="width: 100%; max-height: 280px; object-fit: cover; border-radius: 8px; border: 2px solid #e2e8f0; box-shadow: 0 2px 6px rgba(0,0,0,0.08);" alt="Cleaner Live Photo" />
+              <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">Live Verification Photo</div>
+            </div>
+          ` : ''}
           <div><b>Cleaner:</b> ${data.cleaner_name}</div>
           <div><b>Site:</b> ${data.site_name}</div>
           <div><b>Time:</b> ${new Date(data.created_at).toLocaleString()}</div>

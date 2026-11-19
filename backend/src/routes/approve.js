@@ -15,7 +15,7 @@ router.get('/api/checkin-info', async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT ci.id, ci.status, ci.created_at, ci.distance_meters,
+      `SELECT ci.id, ci.status, ci.created_at, ci.distance_meters, ci.photo_data,
               cl.name AS cleaner_name, s.name AS site_name
        FROM checkins ci
        JOIN cleaners cl ON cl.id = ci.cleaner_id

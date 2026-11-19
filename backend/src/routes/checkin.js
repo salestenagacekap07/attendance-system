@@ -2,28 +2,30 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../db');
 const { distanceMeters, isWithinGeofence } = require('../geofence');
-const { sendText } = require('../whatsapp');
+const { sendNotification } = require('../whatsapp');
 
 const router = express.Router();
 
 /**
  * POST /checkin
- * body: { employee_code, latitude, longitude }
+ * body: { employee_code, latitude, longitude, photo }
  *
  * Flow:
  *  1. Look up the cleaner and their assigned site.
- *  2. Compute distance to the site and whether it's within the geofence.
- *  3. Create a checkin record (pending), even if outside geofence — we still
- *     want a record of the attempt, so it's visible/auditable, not silently lost.
- *  4. If within geofence, notify the site's PIC via WhatsApp with an approval link.
- *     If outside geofence, we skip the WhatsApp step and return a clear reason;
- *     you can wire this to an "out of range" UI message.
+ *  2. Verify photo is provided.
+ *  3. Compute distance to the site and whether it's within the geofence.
+ *  4. Create a checkin record (pending) with photo_data.
+ *  5. If within geofence, notify the site's PIC via WhatsApp with the photo & approval link.
  */
 router.post('/checkin', async (req, res) => {
-  const { employee_code, latitude, longitude } = req.body;
+  const { employee_code, latitude, longitude, photo } = req.body;
 
   if (!employee_code || latitude === undefined || longitude === undefined) {
     return res.status(400).json({ error: 'employee_code, latitude, longitude are required' });
+  }
+
+  if (!photo) {
+    return res.status(400).json({ error: 'Live photo is required to prevent clocking in for others.' });
   }
 
   const lat = Number(latitude);
@@ -63,10 +65,10 @@ router.post('/checkin', async (req, res) => {
 
     const insertResult = await client.query(
       `INSERT INTO checkins
-         (cleaner_id, site_id, latitude, longitude, distance_meters, within_geofence, status, approval_token, pic_id)
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8)
+         (cleaner_id, site_id, latitude, longitude, distance_meters, within_geofence, status, approval_token, pic_id, photo_data)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9)
        RETURNING id, created_at`,
-      [cleaner.cleaner_id, cleaner.site_id, lat, lon, dist, within, token, pics.length > 0 ? pics[0].id : null]
+      [cleaner.cleaner_id, cleaner.site_id, lat, lon, dist, within, token, pics.length > 0 ? pics[0].id : null, photo]
     );
 
     const checkinId = insertResult.rows[0].id;
@@ -112,7 +114,7 @@ ${approvalUrl}
 
     for (const pic of pics) {
       try {
-        await sendText(pic.whatsapp_number, message);
+        await sendNotification(pic.whatsapp_number, message, photo);
         sentCount += 1;
       } catch (waErr) {
         firstError = waErr;

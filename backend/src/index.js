@@ -9,7 +9,7 @@ const operationsRouter = require('./routes/operations');
 const pairRouter = require('./routes/pair');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Serve the static frontend (checkin.html, approve.html, pair.html) directly from Express
 // so you don't need a separate web server for this MVP.

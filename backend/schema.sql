@@ -11,10 +11,15 @@ INSERT INTO clients (name)
 SELECT 'Default Client'
 WHERE NOT EXISTS (SELECT 1 FROM clients WHERE name = 'Default Client');
 
-ALTER TABLE sites ADD COLUMN IF NOT EXISTS client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL;
-UPDATE sites
-SET client_id = (SELECT id FROM clients WHERE name = 'Default Client')
-WHERE client_id IS NULL;
+CREATE TABLE IF NOT EXISTS sites (
+    id SERIAL PRIMARY KEY,
+    client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+    name TEXT NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    radius_meters DOUBLE PRECISION NOT NULL DEFAULT 150,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 CREATE TABLE IF NOT EXISTS pics (
     id SERIAL PRIMARY KEY,
@@ -32,7 +37,12 @@ CREATE TABLE IF NOT EXISTS cleaners (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TYPE checkin_status AS ENUM ('pending', 'approved', 'rejected', 'expired');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'checkin_status') THEN
+    CREATE TYPE checkin_status AS ENUM ('pending', 'approved', 'rejected', 'expired');
+  END IF;
+END$$;
 
 CREATE TABLE IF NOT EXISTS checkins (
     id SERIAL PRIMARY KEY,
@@ -45,6 +55,7 @@ CREATE TABLE IF NOT EXISTS checkins (
     status checkin_status NOT NULL DEFAULT 'pending',
     approval_token TEXT UNIQUE NOT NULL,
     pic_id INTEGER REFERENCES pics(id),
+    photo_data TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     decided_at TIMESTAMPTZ
 );
