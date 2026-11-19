@@ -8,22 +8,28 @@
   :root { color-scheme: light dark; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    max-width: 420px;
-    margin: 40px auto;
-    padding: 0 20px;
+    max-width: 440px;
+    margin: 30px auto;
+    padding: 0 20px 40px;
   }
-  h1 { font-size: 1.4rem; margin-bottom: 4px; }
-  p.subtitle { color: #666; margin-top: 0; font-size: 0.95rem; }
-  label { display: block; margin-top: 16px; font-weight: 600; font-size: 0.9rem; }
+  h1 { font-size: 1.5rem; margin-bottom: 4px; }
+  p.subtitle { color: #64748b; margin-top: 0; font-size: 0.95rem; }
+  
+  label { display: block; margin-top: 18px; font-weight: 600; font-size: 0.9rem; }
   input[type="text"] {
     width: 100%;
-    padding: 12px;
+    padding: 14px;
     margin-top: 6px;
-    font-size: 1rem;
+    font-size: 1.1rem;
     box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    outline: none;
   }
+  input[type="text"]:focus {
+    border-color: #16a34a;
+  }
+
   .photo-section {
     margin-top: 18px;
     border: 2px dashed #94a3b8;
@@ -31,6 +37,11 @@
     padding: 16px;
     text-align: center;
     background: #f8fafc;
+    transition: all 0.2s ease;
+  }
+  .photo-section.missing {
+    border-color: #ef4444;
+    background: #fef2f2;
   }
   .camera-btn {
     display: inline-flex;
@@ -38,7 +49,7 @@
     justify-content: center;
     gap: 8px;
     width: 100%;
-    padding: 12px;
+    padding: 13px;
     font-size: 1rem;
     font-weight: 600;
     border: 1px solid #16a34a;
@@ -70,73 +81,149 @@
     border-radius: 4px;
     font-weight: 600;
   }
+
   #checkinBtn {
     margin-top: 24px;
     width: 100%;
-    padding: 14px;
-    font-size: 1.05rem;
-    font-weight: 600;
+    padding: 16px;
+    font-size: 1.15rem;
+    font-weight: 700;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background: #16a34a;
     color: white;
     cursor: pointer;
+    box-shadow: 0 4px 10px rgba(22, 163, 74, 0.25);
+    transition: all 0.2s ease;
   }
-  button:disabled { background: #999; cursor: not-allowed; }
-  #status {
-    margin-top: 20px;
-    padding: 12px;
-    border-radius: 6px;
-    font-size: 0.95rem;
+  #checkinBtn.loading {
+    background: #0284c7;
+    cursor: wait;
+  }
+  #checkinBtn.success {
+    background: #16a34a;
+  }
+  #checkinBtn.failed {
+    background: #dc2626;
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.25);
+  }
+
+  /* Result Alert Cards */
+  .result-card {
+    margin-top: 22px;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
     display: none;
+    animation: fadeIn 0.3s ease;
   }
-  #status.ok { background: #dcfce7; color: #166534; display: block; }
-  #status.warn { background: #fef9c3; color: #854d0e; display: block; }
-  #status.err { background: #fee2e2; color: #991b1b; display: block; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .result-card.ok {
+    background: #dcfce7;
+    border: 2px solid #16a34a;
+    color: #166534;
+    display: block;
+  }
+  .result-card.err {
+    background: #fee2e2;
+    border: 2px solid #dc2626;
+    color: #991b1b;
+    display: block;
+  }
+  .result-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .result-body {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+  .retry-btn {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+  }
+  .reset-btn {
+    background: #16a34a;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 8px;
+  }
 </style>
 </head>
 <body>
   <h1>Cleaner Check-In</h1>
-  <p class="subtitle">Enter your employee code, snap a selfie at your site, and tap check in.</p>
+  <p class="subtitle">Enter your employee code, snap a selfie at your site, and tap Check In.</p>
 
-  <label for="employee_code">Employee Code</label>
-  <input id="employee_code" type="text" placeholder="e.g. CL01" autocomplete="off" />
+  <form id="checkinForm" onsubmit="return false;">
+    <label for="employee_code">Employee Code</label>
+    <input id="employee_code" type="text" placeholder="e.g. CL01" autocomplete="off" />
 
-  <label>Live Photo Verification</label>
-  <div class="photo-section">
-    <input id="photoInput" type="file" accept="image/*" capture="user" style="display: none;" />
-    <button type="button" class="camera-btn" id="takePhotoBtn">📸 Take Live Selfie</button>
-    
-    <div id="photoPreviewContainer">
-      <img id="photoPreview" alt="Selfie preview" />
-      <span class="photo-badge">Selfie Ready ✅</span>
+    <label>Live Photo Verification</label>
+    <div class="photo-section" id="photoSection">
+      <input id="photoInput" type="file" accept="image/*" capture="user" style="display: none;" />
+      <button type="button" class="camera-btn" id="takePhotoBtn">📸 Take Live Selfie</button>
+      
+      <div id="photoPreviewContainer">
+        <img id="photoPreview" alt="Selfie preview" />
+        <span class="photo-badge">Selfie Ready ✅</span>
+      </div>
+      <div id="photoWarning" style="color:#dc2626; font-size:0.85rem; margin-top:8px; display:none; font-weight:600;">
+        ⚠️ Please snap a selfie photo before checking in!
+      </div>
     </div>
-  </div>
 
-  <button id="checkinBtn">Check In</button>
+    <!-- Live Status / Result Card -->
+    <div id="resultCard" class="result-card">
+      <div id="resultIcon" style="font-size: 2.2rem; margin-bottom: 6px;"></div>
+      <div id="resultTitle" class="result-title"></div>
+      <div id="resultBody" class="result-body"></div>
+      <div id="resultAction"></div>
+    </div>
 
-  <div id="status"></div>
+    <button id="checkinBtn" type="button">Check In</button>
+  </form>
 
   <script>
     const btn = document.getElementById('checkinBtn');
+    const employeeCodeInput = document.getElementById('employee_code');
     const takePhotoBtn = document.getElementById('takePhotoBtn');
     const photoInput = document.getElementById('photoInput');
+    const photoSection = document.getElementById('photoSection');
     const photoPreviewContainer = document.getElementById('photoPreviewContainer');
     const photoPreview = document.getElementById('photoPreview');
-    const statusEl = document.getElementById('status');
+    const photoWarning = document.getElementById('photoWarning');
+
+    const resultCard = document.getElementById('resultCard');
+    const resultIcon = document.getElementById('resultIcon');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultBody = document.getElementById('resultBody');
+    const resultAction = document.getElementById('resultAction');
 
     let capturedPhotoBase64 = null;
-
-    function showStatus(type, text) {
-      statusEl.className = type;
-      statusEl.textContent = text;
-    }
 
     takePhotoBtn.addEventListener('click', () => {
       photoInput.click();
     });
 
-    // Client-side image compression so upload is fast & light
+    // Client-side image compression
     function compressImage(file, maxWidth = 800, quality = 0.75) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -169,80 +256,159 @@
       if (!file) return;
 
       try {
-        showStatus('warn', 'Processing photo...');
+        takePhotoBtn.textContent = 'Processing photo...';
         capturedPhotoBase64 = await compressImage(file, 800, 0.75);
         photoPreview.src = capturedPhotoBase64;
         photoPreviewContainer.style.display = 'block';
+        photoSection.classList.remove('missing');
+        photoWarning.style.display = 'none';
         takePhotoBtn.textContent = '📸 Retake Selfie';
-        statusEl.style.display = 'none';
+        resultCard.style.display = 'none';
       } catch (err) {
-        showStatus('err', 'Failed to process photo. Please try again.');
+        showFailure('Failed to process camera photo. Please try again.');
       }
     });
 
-    btn.addEventListener('click', () => {
-      const employee_code = document.getElementById('employee_code').value.trim();
-      if (!employee_code) {
-        showStatus('err', 'Please enter your employee code.');
+    // Fast GPS with cellular/wifi fallback
+    function getGPSCoordinates() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          return reject(new Error('Geolocation is not supported by your browser.'));
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve(pos.coords),
+          () => {
+            // Fallback to low-accuracy network triangulation if high-accuracy GPS satellite hangs indoors
+            navigator.geolocation.getCurrentPosition(
+              (pos) => resolve(pos.coords),
+              (err2) => {
+                let msg = 'Location access denied or unavailable.';
+                if (err2.code === 1) msg = 'Location permission denied. Please allow location in your browser.';
+                if (err2.code === 2) msg = 'Position unavailable. Please turn on device GPS.';
+                if (err2.code === 3) msg = 'Location request timed out. Please retry.';
+                reject(new Error(msg));
+              },
+              { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+            );
+          },
+          { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 }
+        );
+      });
+    }
+
+    function showSuccess(data, code) {
+      btn.className = 'success';
+      btn.textContent = 'Checked in edy! ✅';
+      btn.disabled = false;
+
+      resultCard.className = 'result-card ok';
+      resultIcon.textContent = '🎉';
+      resultTitle.textContent = 'Checked In edy!';
+      
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      resultBody.innerHTML = `
+        <strong>Cleaner:</strong> ${data.cleaner_name || code}<br>
+        <strong>Site:</strong> ${data.site_name || 'Assigned Site'}<br>
+        <strong>Time:</strong> ${timeStr}<br>
+        <span style="display:inline-block; margin-top:8px; font-size:0.9rem;">
+          ${data.sent_to_pics ? '✅ Live photo & attendance sent to PIC on WhatsApp.' : '✅ Attendance logged in system.'}
+        </span>
+      `;
+
+      resultAction.innerHTML = `
+        <button type="button" class="reset-btn" onclick="resetForm()">Check In Another Cleaner</button>
+      `;
+      resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function showFailure(message) {
+      btn.className = 'failed';
+      btn.textContent = 'Check-in Failed — Retry 🔄';
+      btn.disabled = false;
+
+      resultCard.className = 'result-card err';
+      resultIcon.textContent = '❌';
+      resultTitle.textContent = 'Check-in Failed';
+      resultBody.innerHTML = `
+        <div style="font-weight:600; margin-bottom:4px;">${message}</div>
+        <div style="font-size:0.85rem; color:#7f1d1d;">Please verify your code, selfie, or distance and tap retry.</div>
+      `;
+      resultAction.innerHTML = `
+        <button type="button" class="retry-btn" onclick="handleCheckIn()">Retry Check-in 🔄</button>
+      `;
+      resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function resetForm() {
+      employeeCodeInput.value = '';
+      capturedPhotoBase64 = null;
+      photoPreviewContainer.style.display = 'none';
+      takePhotoBtn.textContent = '📸 Take Live Selfie';
+      resultCard.style.display = 'none';
+      btn.className = '';
+      btn.textContent = 'Check In';
+      btn.disabled = false;
+    }
+
+    async function handleCheckIn() {
+      const code = employeeCodeInput.value.trim();
+      if (!code) {
+        showFailure('Please enter your Employee Code.');
+        employeeCodeInput.focus();
         return;
       }
 
       if (!capturedPhotoBase64) {
-        showStatus('err', 'Please take a live selfie photo before checking in.');
+        photoSection.classList.add('missing');
+        photoWarning.style.display = 'block';
+        showFailure('Live selfie photo is required. Tap "Take Live Selfie" above!');
         return;
       }
 
-      if (!navigator.geolocation) {
-        showStatus('err', 'Your browser does not support location. Use a different device.');
-        return;
-      }
-
+      // Set loading state
+      btn.className = 'loading';
+      btn.textContent = 'Checking in... ⏳';
       btn.disabled = true;
-      showStatus('warn', 'Getting your location...');
+      resultCard.style.display = 'none';
 
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          try {
-            showStatus('warn', 'Submitting check-in and photo...');
-            const res = await fetch('/checkin', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                employee_code,
-                latitude,
-                longitude,
-                photo: capturedPhotoBase64
-              }),
-            });
+      let coords;
+      try {
+        coords = await getGPSCoordinates();
+      } catch (geoErr) {
+        showFailure(geoErr.message);
+        return;
+      }
 
-            let data;
-            try {
-              data = await res.json();
-            } catch (jsonErr) {
-              data = { error: 'Server error (' + res.status + ')' };
-            }
+      try {
+        const res = await fetch('/checkin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            employee_code: code,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            photo: capturedPhotoBase64
+          }),
+        });
 
-            if (!res.ok) {
-              showStatus('err', data.error || 'Check-in failed.');
-            } else if (data.within_geofence === false) {
-              showStatus('warn', data.message);
-            } else {
-              showStatus('ok', data.message || 'Checked in with photo! Waiting for PIC approval.');
-            }
-          } catch (err) {
-            showStatus('err', err.message || 'Network error. Please try again.');
-          } finally {
-            btn.disabled = false;
-          }
-        },
-        (geoErr) => {
-          showStatus('err', 'Location permission denied or unavailable. Enable location and try again.');
-          btn.disabled = false;
-        },
-        { enableHighAccuracy: true, timeout: 15000 }
-      );
-    });
+        let data;
+        try {
+          data = await res.json();
+        } catch (jsonErr) {
+          data = { error: 'Server error (' + res.status + ')' };
+        }
+
+        if (!res.ok) {
+          showFailure(data.error || 'Check-in failed. Please retry.');
+        } else {
+          showSuccess(data, code);
+        }
+      } catch (netErr) {
+        showFailure('Network error connecting to server. Please tap retry.');
+      }
+    }
+
+    btn.addEventListener('click', handleCheckIn);
   </script>
 </body>
 </html>

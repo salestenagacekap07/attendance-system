@@ -74,12 +74,12 @@ router.post('/checkin', async (req, res) => {
     const checkinId = insertResult.rows[0].id;
 
     if (!within) {
-      return res.status(200).json({
+      return res.status(400).json({
         checkin_id: checkinId,
         status: 'pending',
         within_geofence: false,
         distance_meters: Math.round(dist),
-        message: `You are ${Math.round(dist)}m from ${cleaner.site_name}, outside the allowed ${cleaner.radius_meters}m range. Check-in logged but PIC was not notified.`,
+        error: `Check-in Failed: You are ${Math.round(dist)}m from ${cleaner.site_name}, outside the allowed ${cleaner.radius_meters}m range. Please move closer and retry.`,
       });
     }
 
@@ -127,7 +127,10 @@ ${approvalUrl}
         checkin_id: checkinId,
         status: 'pending',
         within_geofence: true,
-        warning: 'Checked in, but WhatsApp notification to all PICs failed to send. Retry or notify PICs manually.',
+        site_name: cleaner.site_name,
+        cleaner_name: cleaner.cleaner_name,
+        warning: 'Checked in edy, but WhatsApp alert to PIC could not be sent (WhatsApp bot offline).',
+        message: `Checked in edy at ${cleaner.site_name}! (Attendance saved in system).`,
         error: firstError ? String(firstError) : undefined,
       });
     }
@@ -138,7 +141,9 @@ ${approvalUrl}
       within_geofence: true,
       distance_meters: Math.round(dist),
       sent_to_pics: sentCount,
-      message: `Checked in at ${cleaner.site_name}. Waiting for PIC approval.`,
+      site_name: cleaner.site_name,
+      cleaner_name: cleaner.cleaner_name,
+      message: `Checked in edy at ${cleaner.site_name}! Sent to PIC for approval.`,
     });
   } catch (err) {
     console.error('Error in /checkin', err);
