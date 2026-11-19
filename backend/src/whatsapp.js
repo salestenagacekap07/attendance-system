@@ -21,12 +21,93 @@ const {
   default: makeWASocket,
   useMultiFileAuthState,
   DisconnectReason,
+  BufferJSON,
+  initAuthCreds,
+  proto,
 } = require('@whiskeysockets/baileys');
 const qrcode = require('qrcode-terminal');
 const path = require('path');
 const pino = require('pino');
+const { pool } = require('./db');
 
 const AUTH_DIR = path.join(__dirname, '..', 'auth');
+
+async function usePostgresAuthState(pgPool) {
+  await pgPool.query(`
+    CREATE TABLE IF NOT EXISTS whatsapp_auth (
+      id TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+  `);
+
+  const writeData = async (data, id) => {
+    try {
+      const serialized = JSON.stringify(data, BufferJSON.replacer);
+      await pgPool.query(
+        `INSERT INTO whatsapp_auth (id, value)
+         VALUES ($1, $2)
+         ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value`,
+        [id, serialized]
+      );
+    } catch (err) {
+      console.error(`Error writing auth data for ${id}:`, err.message);
+    }
+  };
+
+  const readData = async (id) => {
+    try {
+      const res = await pgPool.query(`SELECT value FROM whatsapp_auth WHERE id = $1`, [id]);
+      if (res.rows.length === 0) return null;
+      return JSON.parse(res.rows[0].value, BufferJSON.reviver);
+    } catch (err) {
+      console.error(`Error reading auth data for ${id}:`, err.message);
+      return null;
+    }
+  };
+
+  const removeData = async (id) => {
+    try {
+      await pgPool.query(`DELETE FROM whatsapp_auth WHERE id = $1`, [id]);
+    } catch (err) {
+      console.error(`Error removing auth data for ${id}:`, err.message);
+    }
+  };
+
+  const creds = (await readData('creds')) || initAuthCreds();
+
+  return {
+    state: {
+      creds,
+      keys: {
+        get: async (type, ids) => {
+          const data = {};
+          await Promise.all(
+            ids.map(async (id) => {
+              let value = await readData(`${type}-${id}`);
+              if (type === 'app-state-sync-key' && value) {
+                value = proto.Message.AppStateSyncKeyData.fromObject(value);
+              }
+              data[id] = value;
+            })
+          );
+          return data;
+        },
+        set: async (data) => {
+          const tasks = [];
+          for (const category in data) {
+            for (const id in data[category]) {
+              const value = data[category][id];
+              const key = `${category}-${id}`;
+              tasks.push(value ? writeData(value, key) : removeData(key));
+            }
+          }
+          await Promise.all(tasks);
+        },
+      },
+    },
+    saveCreds: () => writeData(creds, 'creds'),
+  };
+}
 
 let sock = null;
 let isReady = false;
@@ -132,7 +213,25 @@ async function requestPairingCode(rawNumber) {
 }
 
 async function connectWhatsApp() {
-  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+  let state;
+  let saveCreds;
+
+  if (process.env.DATABASE_URL) {
+    try {
+      const pgAuth = await usePostgresAuthState(pool);
+      state = pgAuth.state;
+      saveCreds = pgAuth.saveCreds;
+    } catch (err) {
+      console.warn('Failed to initialize Postgres auth state, falling back to file auth:', err.message);
+      const fileAuth = await useMultiFileAuthState(AUTH_DIR);
+      state = fileAuth.state;
+      saveCreds = fileAuth.saveCreds;
+    }
+  } else {
+    const fileAuth = await useMultiFileAuthState(AUTH_DIR);
+    state = fileAuth.state;
+    saveCreds = fileAuth.saveCreds;
+  }
 
   sock = makeWASocket({
     auth: state,
@@ -175,7 +274,10 @@ async function connectWhatsApp() {
       if (shouldReconnect) {
         connectWhatsApp();
       } else {
-        console.log('Logged out from WhatsApp. Delete the ./auth folder and restart to re-link.');
+        console.log('Logged out from WhatsApp. Clearing session to allow re-linking.');
+        if (process.env.DATABASE_URL) {
+          pool.query('DELETE FROM whatsapp_auth').catch(() => {});
+        }
       }
     }
   });

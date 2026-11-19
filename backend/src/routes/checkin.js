@@ -129,8 +129,8 @@ ${approvalUrl}
         within_geofence: true,
         site_name: cleaner.site_name,
         cleaner_name: cleaner.cleaner_name,
-        warning: 'Checked in edy, but WhatsApp alert to PIC could not be sent (WhatsApp bot offline).',
-        message: `Checked in edy at ${cleaner.site_name}! (Attendance saved in system).`,
+        warning: 'Checked in, but WhatsApp alert to PIC could not be sent (WhatsApp bot offline).',
+        message: `Checked in at ${cleaner.site_name}! (Attendance saved in system).`,
         error: firstError ? String(firstError) : undefined,
       });
     }
@@ -143,7 +143,7 @@ ${approvalUrl}
       sent_to_pics: sentCount,
       site_name: cleaner.site_name,
       cleaner_name: cleaner.cleaner_name,
-      message: `Checked in edy at ${cleaner.site_name}! Sent to PIC for approval.`,
+      message: `Checked in at ${cleaner.site_name}! Sent to PIC for approval.`,
     });
   } catch (err) {
     console.error('Error in /checkin', err);

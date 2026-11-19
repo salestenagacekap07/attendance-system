@@ -63,3 +63,8 @@ CREATE TABLE IF NOT EXISTS checkins (
 CREATE INDEX IF NOT EXISTS idx_checkins_status ON checkins(status);
 CREATE INDEX IF NOT EXISTS idx_checkins_token ON checkins(approval_token);
 CREATE INDEX IF NOT EXISTS idx_checkins_cleaner ON checkins(cleaner_id, created_at);
+
+CREATE TABLE IF NOT EXISTS whatsapp_auth (
+    id TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);

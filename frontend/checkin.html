@@ -298,12 +298,12 @@
 
     function showSuccess(data, code) {
       btn.className = 'success';
-      btn.textContent = 'Checked in edy! ✅';
+      btn.textContent = 'Checked in ! ✅';
       btn.disabled = false;
 
       resultCard.className = 'result-card ok';
       resultIcon.textContent = '🎉';
-      resultTitle.textContent = 'Checked In edy!';
+      resultTitle.textContent = 'Checked in ! ✅';
       
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       resultBody.innerHTML = `
