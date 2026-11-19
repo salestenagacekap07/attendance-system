@@ -8,7 +8,7 @@ function normalizeWhatsAppNumber(raw) {
   const digits = String(raw).replace(/\D/g, '');
   if (!digits) return '';
 
-  if (digits.startsWith('0')) return '6' + digits.slice(1);
+  if (digits.startsWith('0')) return '60' + digits.slice(1);
   if (digits.startsWith('60')) return digits;
   if (digits.startsWith('6')) return digits;
   return digits;
@@ -228,6 +228,47 @@ router.get('/api/operations/attendance', async function (req, res) {
   } catch (error) {
     console.error('Error in /api/operations/attendance', error);
     return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 6. Test WhatsApp notification endpoint
+router.post('/api/operations/test-whatsapp', async function (req, res) {
+  try {
+    const { getSocket, isReady } = require('../whatsapp');
+    const sock = getSocket();
+    if (!isReady() || !sock) {
+      return res.status(400).json({ error: 'WhatsApp bot is not connected' });
+    }
+    const number = req.body.number || '60177489628';
+    const cleanNum = number.replace(/\D/g, '');
+    let onWhatsAppResult = null;
+    try {
+      onWhatsAppResult = await sock.onWhatsApp(cleanNum);
+    } catch (e) {
+      onWhatsAppResult = { error: e.message };
+    }
+
+    let sendResult = null;
+    let sendError = null;
+    try {
+      const targetJid = (Array.isArray(onWhatsAppResult) && onWhatsAppResult[0]?.jid)
+        ? onWhatsAppResult[0].jid
+        : `${cleanNum}@s.whatsapp.net`;
+      sendResult = await sock.sendMessage(targetJid, { text: 'Test alert from Attendance System: Connection active.' });
+    } catch (err) {
+      sendError = err.message;
+    }
+
+    return res.json({
+      connected: isReady(),
+      bot_user: sock.user,
+      target: cleanNum,
+      on_whatsapp: onWhatsAppResult,
+      send_result: sendResult ? { id: sendResult.key?.id } : null,
+      send_error: sendError
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 

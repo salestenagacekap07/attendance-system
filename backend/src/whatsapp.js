@@ -291,4 +291,5 @@ module.exports = {
   sendNotification,
   requestPairingCode,
   isReady: () => isReady,
+  getSocket: () => sock,
 };
