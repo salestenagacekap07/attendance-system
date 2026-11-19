@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS checkins (
     action_type VARCHAR(20) NOT NULL DEFAULT 'time_in',
     remark TEXT,
     approval_token TEXT UNIQUE NOT NULL,
-    pic_id INTEGER REFERENCES pics(id),
+    pic_id INTEGER REFERENCES pics(id) ON DELETE SET NULL,
     photo_data TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     decided_at TIMESTAMPTZ

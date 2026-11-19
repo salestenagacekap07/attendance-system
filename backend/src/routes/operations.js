@@ -90,7 +90,7 @@ router.post('/api/operations/pics', async function (req, res) {
 
     const { rows } = await pool.query(
       `INSERT INTO pics (site_id, name, whatsapp_number) VALUES ($1, $2, $3) RETURNING *`,
-      [site_id, name.trim(), normalized]
+      [Number(site_id), name.trim(), normalized]
     );
     return res.status(201).json(rows[0]);
   } catch (error) {
@@ -113,12 +113,13 @@ router.put('/api/operations/pics/:id', async function (req, res) {
       return res.status(400).json({ error: 'whatsapp_number is invalid' });
     }
 
+    const siteIdParam = site_id ? Number(site_id) : null;
     const { rows } = await pool.query(
       `UPDATE pics
        SET name = $1, whatsapp_number = $2, site_id = COALESCE($3, site_id)
        WHERE id = $4
        RETURNING *`,
-      [name.trim(), normalized, site_id || null, id]
+      [name.trim(), normalized, siteIdParam, Number(id)]
     );
 
     if (rows.length === 0) {
@@ -135,7 +136,7 @@ router.put('/api/operations/pics/:id', async function (req, res) {
 router.delete('/api/operations/pics/:id', async function (req, res) {
   try {
     const { id } = req.params;
-    const { rowCount } = await pool.query('DELETE FROM pics WHERE id = $1', [id]);
+    const { rowCount } = await pool.query('DELETE FROM pics WHERE id = $1', [Number(id)]);
     if (rowCount === 0) {
       return res.status(404).json({ error: 'PIC not found' });
     }
@@ -188,7 +189,8 @@ router.get('/api/operations/attendance', async function (req, res) {
              cl.name AS cleaner_name, cl.employee_code,
              s.name AS site_name, s.client_id,
              c.name AS client_name,
-             p.name AS pic_name
+             COALESCE(p.name, (SELECT name FROM pics WHERE site_id = s.id LIMIT 1)) AS pic_name,
+             COALESCE(p.whatsapp_number, (SELECT whatsapp_number FROM pics WHERE site_id = s.id LIMIT 1)) AS pic_whatsapp
       FROM checkins ci
       JOIN cleaners cl ON cl.id = ci.cleaner_id
       JOIN sites s ON s.id = ci.site_id
