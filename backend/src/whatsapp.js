@@ -24,6 +24,7 @@ const {
   BufferJSON,
   initAuthCreds,
   proto,
+  makeCacheableSignalKeyStore,
 } = require('@whiskeysockets/baileys');
 const qrcode = require('qrcode-terminal');
 const path = require('path');
@@ -81,15 +82,27 @@ async function usePostgresAuthState(pgPool) {
       keys: {
         get: async (type, ids) => {
           const data = {};
-          await Promise.all(
-            ids.map(async (id) => {
-              let value = await readData(`${type}-${id}`);
+          if (!ids || ids.length === 0) return data;
+          const fullKeys = ids.map((id) => `${type}-${id}`);
+          try {
+            const res = await pgPool.query(
+              `SELECT id, value FROM whatsapp_auth WHERE id = ANY($1)`,
+              [fullKeys]
+            );
+            const map = new Map();
+            for (const row of res.rows) {
+              map.set(row.id, JSON.parse(row.value, BufferJSON.reviver));
+            }
+            for (const id of ids) {
+              let value = map.get(`${type}-${id}`) || null;
               if (type === 'app-state-sync-key' && value) {
                 value = proto.Message.AppStateSyncKeyData.fromObject(value);
               }
               data[id] = value;
-            })
-          );
+            }
+          } catch (err) {
+            console.error(`Error batch reading keys for ${type}:`, err.message);
+          }
           return data;
         },
         set: async (data) => {
@@ -130,6 +143,11 @@ async function processQueue() {
       if (!isReady || !sock) {
         throw new Error('WhatsApp socket is not connected yet');
       }
+
+      // 1. Send the primary text notification with approval link first
+      await sock.sendMessage(jid, { text });
+
+      // 2. If a verification selfie photo is attached, send the photo
       if (image) {
         try {
           let buffer;
@@ -139,22 +157,19 @@ async function processQueue() {
             const cleanBase64 = image.replace(/^data:image\/\w+;base64,/, '');
             buffer = Buffer.from(cleanBase64, 'base64');
           }
-          await sock.sendMessage(jid, { image: buffer, caption: text });
-          resolve(true);
+          await sock.sendMessage(jid, { image: buffer, caption: '📸 Live Verification Photo' });
         } catch (imgErr) {
-          console.warn('Failed to send photo over WhatsApp, falling back to text:', imgErr.message);
-          await sock.sendMessage(jid, { text });
-          resolve(true);
+          console.warn('Failed to send photo over WhatsApp:', imgErr.message);
         }
-      } else {
-        await sock.sendMessage(jid, { text });
-        resolve(true);
       }
+
+      resolve(true);
     } catch (err) {
+      console.error('Failed to send WhatsApp message to', jid, err.message);
       reject(err);
     }
     // Pace sends so this doesn't look like a bulk-blasting bot.
-    await new Promise((r) => setTimeout(r, randomDelayMs()));
+    await new Promise((r) => setTimeout(r, randomDelayMs(800, 2000)));
   }
 
   queueRunning = false;
@@ -233,9 +248,13 @@ async function connectWhatsApp() {
     saveCreds = fileAuth.saveCreds;
   }
 
+  const logger = pino({ level: 'warn' });
   sock = makeWASocket({
-    auth: state,
-    logger: pino({ level: 'warn' }),
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, logger),
+    },
+    logger,
     printQRInTerminal: false, // we handle QR display ourselves below
   });
 
