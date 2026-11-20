@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Attendance Approval</title>
 <style>
-  :root { color-scheme: light dark; }
+  :root { color-scheme: light; }
   * { box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -145,15 +145,26 @@
     padding: 12px;
     font-size: 0.95rem;
     font-family: inherit;
-    border: 1px solid #cbd5e1;
+    border: 1.5px solid #cbd5e1;
     border-radius: 8px;
     resize: vertical;
     outline: none;
     transition: border-color 0.2s;
-    background: #ffffff;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    box-sizing: border-box;
+  }
+  .remark-textarea::placeholder {
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
   }
   .remark-textarea:focus {
-    border-color: #0284c7;
+    border-color: #16a34a;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
   }
 
   /* Action Buttons */
