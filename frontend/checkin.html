@@ -485,13 +485,13 @@
             <div class="wa-notify-head">
               <span class="icon">📲</span>
               <div>
-                <div class="title">Step 2: Send Approval to PIC</div>
+                <div class="title">WhatsApp Launching...</div>
               </div>
             </div>
             <div class="wa-notify-sub">
-              Tap the green button below to send your selfie & verification link directly to PIC <strong>${pic.name}</strong> on WhatsApp:
+              Opening WhatsApp on your device. <strong>Tap the Send button</strong> in WhatsApp to deliver your attendance approval to <strong>${pic.name}</strong>.
             </div>
-            <a href="${pic.share_url}" target="_blank" class="wa-send-btn">
+            <a href="${pic.share_url}" class="wa-send-btn">
               💬 Open WhatsApp & Send to ${pic.name}
             </a>
             <div class="wa-actions-bar">
@@ -500,6 +500,15 @@
             </div>
           </div>
         `;
+
+        // Automatically trigger WhatsApp redirect on mobile
+        setTimeout(() => {
+          try {
+            window.location.href = pic.share_url;
+          } catch (e) {
+            console.log('Auto-redirect error:', e);
+          }
+        }, 500);
       } else if (data.pics && data.pics.length > 1) {
         picHtml = `
           <div class="wa-notify-box">

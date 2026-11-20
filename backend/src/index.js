@@ -11,8 +11,15 @@ const pairRouter = require('./routes/pair');
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
+// Never cache HTML/JS frontend assets so phones always fetch live updates
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 // Serve the static frontend (checkin.html, approve.html, pair.html) directly from Express
-// so you don't need a separate web server for this MVP.
 app.use(express.static(path.join(__dirname, '..', '..', 'frontend')));
 
 app.use(checkinRouter);
