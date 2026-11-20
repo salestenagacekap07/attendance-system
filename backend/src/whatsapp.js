@@ -25,6 +25,7 @@ const {
   initAuthCreds,
   proto,
   makeCacheableSignalKeyStore,
+  Browsers,
 } = require('@whiskeysockets/baileys');
 const qrcode = require('qrcode-terminal');
 const path = require('path');
@@ -125,6 +126,9 @@ async function usePostgresAuthState(pgPool) {
 let sock = null;
 let isReady = false;
 
+// Store recently sent messages so Baileys can re-encrypt them when WhatsApp requests retry
+const sentMessagesStore = new Map();
+
 // Simple in-memory outgoing queue so messages are paced, not blasted.
 const outgoingQueue = [];
 let queueRunning = false;
@@ -144,8 +148,26 @@ async function processQueue() {
         throw new Error('WhatsApp socket is not connected yet');
       }
 
+      // Check onWhatsApp to warm up the recipient Signal pre-key exchange before sending
+      let targetJid = jid;
+      try {
+        const rawDigits = jid.replace(/@.*$/, '');
+        const onWa = await sock.onWhatsApp(rawDigits);
+        if (Array.isArray(onWa) && onWa[0]?.exists && onWa[0]?.jid) {
+          targetJid = onWa[0].jid;
+        }
+      } catch (e) {
+        // Fall back to original jid
+      }
+
       // 1. Send the primary text notification with approval link first
-      await sock.sendMessage(jid, { text });
+      const sentText = await sock.sendMessage(targetJid, { text });
+      if (sentText?.key?.id && sentText?.message) {
+        sentMessagesStore.set(sentText.key.id, sentText.message);
+        if (sentMessagesStore.size > 500) {
+          sentMessagesStore.delete(sentMessagesStore.keys().next().value);
+        }
+      }
 
       // 2. If a verification selfie photo is attached, send the photo
       if (image) {
@@ -157,7 +179,10 @@ async function processQueue() {
             const cleanBase64 = image.replace(/^data:image\/\w+;base64,/, '');
             buffer = Buffer.from(cleanBase64, 'base64');
           }
-          await sock.sendMessage(jid, { image: buffer, caption: '📸 Live Verification Photo' });
+          const sentImg = await sock.sendMessage(targetJid, { image: buffer, caption: '📸 Live Verification Photo' });
+          if (sentImg?.key?.id && sentImg?.message) {
+            sentMessagesStore.set(sentImg.key.id, sentImg.message);
+          }
         } catch (imgErr) {
           console.warn('Failed to send photo over WhatsApp:', imgErr.message);
         }
@@ -255,7 +280,16 @@ async function connectWhatsApp() {
       keys: makeCacheableSignalKeyStore(state.keys, logger),
     },
     logger,
+    browser: Browsers.ubuntu('Chrome'),
+    syncFullHistory: false,
+    markOnlineOnConnect: true,
     printQRInTerminal: false, // we handle QR display ourselves below
+    getMessage: async (key) => {
+      if (key && key.id && sentMessagesStore.has(key.id)) {
+        return sentMessagesStore.get(key.id);
+      }
+      return proto.Message.fromObject({});
+    },
   });
 
   sock.ev.on('creds.update', saveCreds);
