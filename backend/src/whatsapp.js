@@ -167,12 +167,27 @@ function randomDelayMs(minMs = 1500, maxMs = 5000) {
   return Math.floor(Math.random() * (maxMs - minMs)) + minMs;
 }
 
+async function getTwilioConfig() {
+  let sid = process.env.TWILIO_ACCOUNT_SID;
+  let token = process.env.TWILIO_AUTH_TOKEN;
+  let from = process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+17372508034';
+  if ((!sid || !token) && process.env.DATABASE_URL) {
+    try {
+      const res = await pool.query(`SELECT key, value FROM app_config WHERE key LIKE 'TWILIO_%'`);
+      for (const row of res.rows) {
+        if (row.key === 'TWILIO_ACCOUNT_SID') sid = row.value;
+        if (row.key === 'TWILIO_AUTH_TOKEN') token = row.value;
+        if (row.key === 'TWILIO_WHATSAPP_FROM') from = row.value;
+      }
+    } catch (e) {}
+  }
+  return { sid, token, from };
+}
+
 async function sendViaTwilio(phoneNumber, text) {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+17372508034';
+  const { sid: accountSid, token: authToken, from } = await getTwilioConfig();
   if (!accountSid || !authToken) {
-    throw new Error('Twilio credentials not configured in environment variables');
+    throw new Error('Twilio credentials not configured');
   }
   const cleanTo = `whatsapp:+${cleanPhoneNumber(phoneNumber)}`;
 
