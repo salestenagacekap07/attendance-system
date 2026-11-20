@@ -167,6 +167,37 @@ function randomDelayMs(minMs = 1500, maxMs = 5000) {
   return Math.floor(Math.random() * (maxMs - minMs)) + minMs;
 }
 
+async function sendViaTwilio(phoneNumber, text) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+17372508034';
+  if (!accountSid || !authToken) {
+    throw new Error('Twilio credentials not configured in environment variables');
+  }
+  const cleanTo = `whatsapp:+${cleanPhoneNumber(phoneNumber)}`;
+
+  const params = new URLSearchParams();
+  params.append('From', from);
+  params.append('To', cleanTo);
+  params.append('Body', text);
+
+  const authHeader = 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+    method: 'POST',
+    headers: {
+      'Authorization': authHeader,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: params.toString(),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || `Twilio error ${res.status}`);
+  }
+  return data;
+}
+
 async function processQueue() {
   if (queueRunning) return;
   queueRunning = true;
@@ -174,6 +205,20 @@ async function processQueue() {
   while (outgoingQueue.length > 0) {
     const { jid, text, image, resolve, reject } = outgoingQueue.shift();
     try {
+      // 1. If Twilio is available, try Twilio first for 100% reliable cloud delivery
+      if (process.env.USE_TWILIO !== 'false') {
+        try {
+          console.log(`[WhatsApp Router] Attempting delivery via Twilio to ${jid}...`);
+          const twilioRes = await sendViaTwilio(jid, text);
+          console.log(`[WhatsApp Router] Twilio delivered successfully: ${twilioRes.sid}`);
+          resolve(true);
+          await new Promise((r) => setTimeout(r, 500));
+          continue;
+        } catch (twilioErr) {
+          console.warn(`[WhatsApp Router] Twilio delivery skipped/failed (${twilioErr.message}), falling back to direct Baileys bot...`);
+        }
+      }
+
       if (!isReady || !sock) {
         throw new Error('WhatsApp socket is not connected yet');
       }
@@ -347,22 +392,31 @@ async function connectWhatsApp() {
 
   sock.ev.on('creds.update', saveCreds);
 
-  // Auto-respond to incoming messages to establish bidirectional E2E session
+  // Auto-respond to incoming messages to establish bidirectional E2E session (guarded against bot ping-pong loops)
+  const autoRepliedJids = new Set();
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     if (type !== 'notify') return;
     for (const msg of messages) {
       if (!msg.key.fromMe && msg.key.remoteJid && !msg.key.remoteJid.endsWith('@g.us')) {
         const senderJid = msg.key.remoteJid;
-        console.log('Received inbound WhatsApp message from:', senderJid);
-        try {
-          const reply = await sock.sendMessage(senderJid, {
-            text: '👋 Hello! Attendance Verification Bot is connected.\n\nYou will receive live cleaner Time In & Time Out approval alerts directly in this chat.',
-          });
-          if (reply?.key?.id && reply?.message) {
-            await saveSentMessage(reply.key.id, reply.message);
+        // Never reply to bots, Twilio sandbox numbers, or repeat contacts to avoid loops
+        if (senderJid.includes('17372508034') || senderJid.includes('14155238886') || autoRepliedJids.has(senderJid)) {
+          continue;
+        }
+        const textContent = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || '').trim().toLowerCase();
+        if (textContent.startsWith('hi') || textContent.startsWith('hello')) {
+          autoRepliedJids.add(senderJid);
+          console.log('Received inbound WhatsApp greeting from:', senderJid);
+          try {
+            const reply = await sock.sendMessage(senderJid, {
+              text: '👋 Hello! Attendance Verification Bot is connected.\n\nYou will receive live cleaner Time In & Time Out approval alerts directly in this chat.',
+            });
+            if (reply?.key?.id && reply?.message) {
+              await saveSentMessage(reply.key.id, reply.message);
+            }
+          } catch (e) {
+            console.error('Failed to auto-reply to inbound message:', e.message);
           }
-        } catch (e) {
-          console.error('Failed to auto-reply to inbound message:', e.message);
         }
       }
     }
