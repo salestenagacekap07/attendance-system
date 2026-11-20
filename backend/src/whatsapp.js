@@ -27,18 +27,26 @@ const {
   makeCacheableSignalKeyStore,
   Browsers,
 } = require('@whiskeysockets/baileys');
+const NodeCacheModule = require('@cacheable/node-cache');
+const NodeCache = NodeCacheModule.NodeCache || NodeCacheModule.default || NodeCacheModule;
 const qrcode = require('qrcode-terminal');
 const path = require('path');
 const pino = require('pino');
 const { pool } = require('./db');
 
 const AUTH_DIR = path.join(__dirname, '..', 'auth');
+const msgRetryCounterCache = new NodeCache();
 
 async function usePostgresAuthState(pgPool) {
   await pgPool.query(`
     CREATE TABLE IF NOT EXISTS whatsapp_auth (
       id TEXT PRIMARY KEY,
       value TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS whatsapp_messages (
+      id TEXT PRIMARY KEY,
+      message JSONB NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
   `);
 
@@ -129,6 +137,27 @@ let isReady = false;
 // Store recently sent messages so Baileys can re-encrypt them when WhatsApp requests retry
 const sentMessagesStore = new Map();
 
+async function saveSentMessage(id, message) {
+  if (!id || !message) return;
+  sentMessagesStore.set(id, message);
+  if (sentMessagesStore.size > 500) {
+    const firstKey = sentMessagesStore.keys().next().value;
+    sentMessagesStore.delete(firstKey);
+  }
+  if (process.env.DATABASE_URL) {
+    try {
+      await pool.query(
+        `INSERT INTO whatsapp_messages (id, message)
+         VALUES ($1, $2)
+         ON CONFLICT (id) DO UPDATE SET message = EXCLUDED.message`,
+        [id, JSON.stringify(message)]
+      );
+    } catch (err) {
+      console.warn('Failed to persist sent message to DB:', err.message);
+    }
+  }
+}
+
 // Simple in-memory outgoing queue so messages are paced, not blasted.
 const outgoingQueue = [];
 let queueRunning = false;
@@ -163,15 +192,13 @@ async function processQueue() {
       // 1. Send the primary text notification with approval link first
       const sentText = await sock.sendMessage(targetJid, { text });
       if (sentText?.key?.id && sentText?.message) {
-        sentMessagesStore.set(sentText.key.id, sentText.message);
-        if (sentMessagesStore.size > 500) {
-          sentMessagesStore.delete(sentMessagesStore.keys().next().value);
-        }
+        await saveSentMessage(sentText.key.id, sentText.message);
       }
 
-      // 2. If a verification selfie photo is attached, send the photo
+      // 2. If a verification selfie photo is attached, pause 1.5s to let text handshake settle, then send photo
       if (image) {
         try {
+          await new Promise((r) => setTimeout(r, 1500));
           let buffer;
           if (Buffer.isBuffer(image)) {
             buffer = image;
@@ -181,7 +208,7 @@ async function processQueue() {
           }
           const sentImg = await sock.sendMessage(targetJid, { image: buffer, caption: '📸 Live Verification Photo' });
           if (sentImg?.key?.id && sentImg?.message) {
-            sentMessagesStore.set(sentImg.key.id, sentImg.message);
+            await saveSentMessage(sentImg.key.id, sentImg.message);
           }
         } catch (imgErr) {
           console.warn('Failed to send photo over WhatsApp:', imgErr.message);
@@ -281,18 +308,55 @@ async function connectWhatsApp() {
     },
     logger,
     browser: Browsers.ubuntu('Chrome'),
+    msgRetryCounterCache,
     syncFullHistory: false,
     markOnlineOnConnect: true,
     printQRInTerminal: false, // we handle QR display ourselves below
     getMessage: async (key) => {
-      if (key && key.id && sentMessagesStore.has(key.id)) {
+      if (!key || !key.id) return undefined;
+      // 1. Check in-memory fast cache
+      if (sentMessagesStore.has(key.id)) {
         return sentMessagesStore.get(key.id);
       }
-      return proto.Message.fromObject({});
+      // 2. Check PostgreSQL persistent store
+      if (process.env.DATABASE_URL) {
+        try {
+          const res = await pool.query('SELECT message FROM whatsapp_messages WHERE id = $1', [key.id]);
+          if (res.rows.length > 0) {
+            const raw = res.rows[0].message;
+            return typeof raw === 'string' ? JSON.parse(raw) : raw;
+          }
+        } catch (err) {
+          console.warn('Error reading message from DB in getMessage:', err.message);
+        }
+      }
+      // If message not available, return undefined (do NOT return empty object to prevent sending blank retries)
+      return undefined;
     },
   });
 
   sock.ev.on('creds.update', saveCreds);
+
+  // Auto-respond to incoming messages to establish bidirectional E2E session
+  sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    if (type !== 'notify') return;
+    for (const msg of messages) {
+      if (!msg.key.fromMe && msg.key.remoteJid && !msg.key.remoteJid.endsWith('@g.us')) {
+        const senderJid = msg.key.remoteJid;
+        console.log('Received inbound WhatsApp message from:', senderJid);
+        try {
+          const reply = await sock.sendMessage(senderJid, {
+            text: '👋 Hello! Attendance Verification Bot is connected.\n\nYou will receive live cleaner Time In & Time Out approval alerts directly in this chat.',
+          });
+          if (reply?.key?.id && reply?.message) {
+            await saveSentMessage(reply.key.id, reply.message);
+          }
+        } catch (e) {
+          console.error('Failed to auto-reply to inbound message:', e.message);
+        }
+      }
+    }
+  });
 
   // If WHATSAPP_PHONE_NUMBER is configured in environment, auto-request pairing code on startup
   if (!sock.authState?.creds?.registered && process.env.WHATSAPP_PHONE_NUMBER) {

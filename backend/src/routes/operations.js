@@ -234,13 +234,13 @@ router.get('/api/operations/attendance', async function (req, res) {
 // 6. Test WhatsApp notification endpoint
 router.post('/api/operations/test-whatsapp', async function (req, res) {
   try {
-    const { getSocket, isReady } = require('../whatsapp');
+    const { getSocket, isReady, sendText } = require('../whatsapp');
     const sock = getSocket();
     if (!isReady() || !sock) {
       return res.status(400).json({ error: 'WhatsApp bot is not connected' });
     }
     const number = req.body.number || '60177489628';
-    const cleanNum = number.replace(/\D/g, '');
+    const cleanNum = normalizeWhatsAppNumber(number);
     let onWhatsAppResult = null;
     try {
       onWhatsAppResult = await sock.onWhatsApp(cleanNum);
@@ -248,13 +248,11 @@ router.post('/api/operations/test-whatsapp', async function (req, res) {
       onWhatsAppResult = { error: e.message };
     }
 
-    let sendResult = null;
+    let sendSuccess = false;
     let sendError = null;
     try {
-      const targetJid = (Array.isArray(onWhatsAppResult) && onWhatsAppResult[0]?.jid)
-        ? onWhatsAppResult[0].jid
-        : `${cleanNum}@s.whatsapp.net`;
-      sendResult = await sock.sendMessage(targetJid, { text: 'Test alert from Attendance System: Connection active.' });
+      await sendText(cleanNum, '🔔 Attendance System Test: Live WhatsApp notifications are active & verified for this number! ✅');
+      sendSuccess = true;
     } catch (err) {
       sendError = err.message;
     }
@@ -264,7 +262,7 @@ router.post('/api/operations/test-whatsapp', async function (req, res) {
       bot_user: sock.user,
       target: cleanNum,
       on_whatsapp: onWhatsAppResult,
-      send_result: sendResult ? { id: sendResult.key?.id } : null,
+      send_success: sendSuccess,
       send_error: sendError
     });
   } catch (err) {

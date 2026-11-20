@@ -321,6 +321,11 @@
         If a PIC resigns, simply click <strong>Edit / Replace</strong> to update their name and WhatsApp number.
       </p>
 
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 0.88rem; color: #1e40af;">
+        <strong>💡 Note for Newly Registered PICs:</strong><br/>
+        Because WhatsApp uses end-to-end encryption, when you register or replace a PIC number, have that phone tap <strong>"💬 Send Hi to Bot"</strong> once (or message <strong>"Hi"</strong> to <strong>+60 17-531 4868</strong>). This establishes the encryption keys so attendance alerts and ringtones arrive immediately without showing <em>"Waiting for this message"</em>.
+      </div>
+
       <!-- Add/Edit Form -->
       <form id="picForm">
         <input type="hidden" id="picId" />
@@ -579,6 +584,7 @@
 
         picTableBody.innerHTML = currentPics.map(pic => {
           const waLink = `https://wa.me/${pic.whatsapp_number}`;
+          const botLink = `https://wa.me/60175314868?text=Hi`;
           return `
             <tr>
               <td><strong>${pic.site_name || '—'}</strong></td>
@@ -590,7 +596,13 @@
               </td>
               <td><span class="badge badge-approved">Active Routing</span></td>
               <td>
-                <div style="display:flex; gap:6px;">
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                  <a href="${botLink}" target="_blank" class="btn-secondary" style="padding:5px 10px; font-size:0.8rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-weight:600;" title="Send Hi from PIC phone to activate bot encryption session">
+                    💬 Send Hi to Bot
+                  </a>
+                  <button type="button" class="btn-secondary" style="padding:5px 10px; font-size:0.8rem;" onclick="handleTestAlert('${pic.whatsapp_number}')" title="Send a test ping to this number">
+                    ⚡ Test Alert
+                  </button>
                   <button type="button" class="btn-secondary" style="padding:5px 10px; font-size:0.8rem;" onclick="handleEditPic(${pic.id})">
                     ✏️ Edit / Replace
                   </button>
@@ -606,6 +618,27 @@
         picTableBody.innerHTML = '<tr><td colspan="5" style="color:#dc2626; text-align:center;">Failed to load PIC directory.</td></tr>';
       }
     }
+
+    window.handleTestAlert = async function(number) {
+      showToast(`Sending test alert to ${number}...`);
+      try {
+        const res = await fetch('/api/operations/test-whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ number })
+        });
+        const data = await res.json();
+        if (data.connected && data.send_success) {
+          showToast(`✅ Test alert sent to ${number}! Check your WhatsApp.`);
+        } else if (data.send_error) {
+          alert(`Failed to send test alert: ${data.send_error}`);
+        } else {
+          showToast(`Alert sent! If recipient shows "Waiting for this message", click "Send Hi to Bot" from that phone.`);
+        }
+      } catch (e) {
+        alert('Error sending test alert: ' + e.message);
+      }
+    };
 
     window.handleEditPic = function(id) {
       const pic = currentPics.find(p => p.id === id);
