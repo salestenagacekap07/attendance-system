@@ -228,6 +228,32 @@
     display: block;
   }
 
+  /* Anti-Self-Approval Security Card */
+  .self-block-card {
+    background: #fef2f2;
+    border: 2px solid #ef4444;
+    border-radius: 10px;
+    padding: 18px 16px;
+    margin-top: 18px;
+    text-align: center;
+    color: #991b1b;
+  }
+  .self-block-card .icon {
+    font-size: 2.2rem;
+    margin-bottom: 6px;
+  }
+  .self-block-card .title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #b91c1c;
+    margin-bottom: 6px;
+  }
+  .self-block-card .msg {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #7f1d1d;
+  }
+
   .loading-box {
     text-align: center;
     padding: 30px 10px;
@@ -289,6 +315,15 @@
         dateStyle: 'medium',
         timeStyle: 'short'
       });
+    }
+
+    function getClientDeviceId() {
+      let id = localStorage.getItem('cleaner_device_id');
+      if (!id) {
+        const match = document.cookie.match(/(^|;)\s*cleaner_device_id=([^;]+)/);
+        if (match) id = match[2];
+      }
+      return id || null;
     }
 
     async function loadDetails() {
@@ -358,6 +393,41 @@
         `;
 
         if (data.status === 'pending') {
+          // Anti-Self-Approval Security Guard
+          const clientDevId = getClientDeviceId();
+          let isSelfApproval = false;
+
+          // Check 1: device_id matches the clock-in phone
+          if (clientDevId && data.device_id && clientDevId === data.device_id) {
+            isSelfApproval = true;
+          }
+
+          // Check 2: check if this browser submitted this token
+          try {
+            const myTokens = JSON.parse(localStorage.getItem('my_checkin_tokens') || '[]');
+            if (myTokens.includes(token)) isSelfApproval = true;
+            if (document.cookie.includes(`submitted_token_${token}=true`)) isSelfApproval = true;
+          } catch (e) {}
+
+          if (isSelfApproval) {
+            remarkSection.style.display = 'none';
+            actionButtons.style.display = 'none';
+            resultEl.style.display = 'block';
+            resultEl.className = '';
+            resultEl.innerHTML = `
+              <div class="self-block-card">
+                <div class="icon">⛔</div>
+                <div class="title">Self-Approval Blocked</div>
+                <div class="msg">
+                  This attendance was submitted from this device. <strong>Cleaners cannot verify their own attendance.</strong>
+                  <br><br>
+                  Only the authorized PIC can review and approve this attendance record from their phone.
+                </div>
+              </div>
+            `;
+            return;
+          }
+
           remarkSection.style.display = 'block';
           actionButtons.style.display = 'flex';
         } else {
@@ -377,7 +447,12 @@
         const res = await fetch('/api/approve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, decision, remark }),
+          body: JSON.stringify({
+            token,
+            decision,
+            remark,
+            client_device_id: getClientDeviceId()
+          }),
         });
         const data = await res.json();
 

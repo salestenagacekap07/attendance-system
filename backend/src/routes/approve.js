@@ -16,7 +16,7 @@ router.get('/api/checkin-info', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT ci.id, ci.status, ci.created_at, ci.distance_meters, ci.photo_data,
-              ci.action_type, ci.remark,
+              ci.action_type, ci.remark, ci.device_id,
               cl.name AS cleaner_name, cl.employee_code, s.name AS site_name
        FROM checkins ci
        JOIN cleaners cl ON cl.id = ci.cleaner_id
@@ -43,7 +43,7 @@ router.get('/api/checkin-info', async (req, res) => {
  * Single-use: a token can only move a checkin out of "pending" once.
  */
 router.post('/api/approve', async (req, res) => {
-  const { token, decision, remark } = req.body;
+  const { token, decision, remark, client_device_id } = req.body;
 
   if (!token || !['approved', 'rejected'].includes(decision)) {
     return res.status(400).json({ error: 'token and decision ("approved"|"rejected") are required' });
@@ -58,7 +58,7 @@ router.post('/api/approve', async (req, res) => {
 
     // Lock the row so a double-tap can't process twice.
     const current = await client.query(
-      `SELECT ci.id, ci.status, ci.cleaner_id, cl.name AS cleaner_name
+      `SELECT ci.id, ci.status, ci.cleaner_id, ci.device_id, cl.name AS cleaner_name
        FROM checkins ci
        JOIN cleaners cl ON cl.id = ci.cleaner_id
        WHERE ci.approval_token = $1
@@ -72,6 +72,16 @@ router.post('/api/approve', async (req, res) => {
     }
 
     const checkin = current.rows[0];
+
+    // Anti-Self-Approval Security Guard:
+    // If the approving device matches the device used to clock in, block it!
+    const cleanClientDev = typeof client_device_id === 'string' ? client_device_id.trim() : null;
+    if (cleanClientDev && checkin.device_id && cleanClientDev === checkin.device_id) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({
+        error: 'Self-Approval Blocked: Cleaners are not permitted to approve their own attendance. Only the authorized PIC can approve from their phone.'
+      });
+    }
 
     if (checkin.status !== 'pending') {
       await client.query('ROLLBACK');

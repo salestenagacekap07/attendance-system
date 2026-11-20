@@ -25,10 +25,11 @@ function formatWaDigits(raw) {
  *  5. If within geofence, notify the site's PIC via WhatsApp with the photo & approval link.
  */
 router.post('/checkin', async (req, res) => {
-  const { employee_code, latitude, longitude, photo } = req.body;
+  const { employee_code, latitude, longitude, photo, device_id } = req.body;
   const action_type = (req.body.action_type || req.body.type || 'time_in').toLowerCase() === 'time_out' ? 'time_out' : 'time_in';
   const typeText = action_type === 'time_out' ? 'Time Out' : 'Time In';
   const typeLabel = action_type === 'time_out' ? 'TIME OUT 🔴' : 'TIME IN 🟢';
+  const cleanDeviceId = typeof device_id === 'string' && device_id.trim().length > 0 ? device_id.trim() : null;
 
   if (!employee_code || latitude === undefined || longitude === undefined) {
     return res.status(400).json({ error: 'employee_code, latitude, longitude are required' });
@@ -75,10 +76,10 @@ router.post('/checkin', async (req, res) => {
 
     const insertResult = await client.query(
       `INSERT INTO checkins
-         (cleaner_id, site_id, latitude, longitude, distance_meters, within_geofence, status, approval_token, pic_id, photo_data, action_type)
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10)
+         (cleaner_id, site_id, latitude, longitude, distance_meters, within_geofence, status, approval_token, pic_id, photo_data, action_type, device_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10, $11)
        RETURNING id, created_at`,
-      [cleaner.cleaner_id, cleaner.site_id, lat, lon, dist, within, token, pics.length > 0 ? pics[0].id : null, photo, action_type]
+      [cleaner.cleaner_id, cleaner.site_id, lat, lon, dist, within, token, pics.length > 0 ? pics[0].id : null, photo, action_type, cleanDeviceId]
     );
 
     const checkinId = insertResult.rows[0].id;
@@ -118,9 +119,9 @@ router.post('/checkin', async (req, res) => {
       };
     });
 
-    // Best-effort background bot notification (non-blocking so response is instant)
+    // Best-effort background bot notification (text only, clean & fast)
     for (const pic of pics) {
-      sendNotification(pic.whatsapp_number, waMessage, photo).catch((err) => {
+      sendNotification(pic.whatsapp_number, waMessage, null).catch((err) => {
         console.warn('Background bot alert failed/skipped for PIC', pic.whatsapp_number, err.message);
       });
     }

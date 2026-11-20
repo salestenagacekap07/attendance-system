@@ -449,6 +449,21 @@
       }
     });
 
+    function getOrCreateDeviceId() {
+      let id = localStorage.getItem('cleaner_device_id');
+      if (!id) {
+        const match = document.cookie.match(/(^|;)\s*cleaner_device_id=([^;]+)/);
+        if (match) {
+          id = match[2];
+        } else {
+          id = 'dev_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now();
+        }
+        localStorage.setItem('cleaner_device_id', id);
+      }
+      document.cookie = `cleaner_device_id=${id}; path=/; max-age=31536000; SameSite=Lax`;
+      return id;
+    }
+
     // Fast GPS with cellular/wifi fallback
     function getGPSCoordinates() {
       return new Promise((resolve, reject) => {
@@ -480,6 +495,20 @@
       submitBtn.className = 'success';
       submitBtn.textContent = isOut ? 'Clocked Out ! ✅' : 'Clocked In ! ✅';
       submitBtn.disabled = false;
+
+      // Anti-Self-Approval: Remember this token on the cleaner's device
+      if (data.approval_url) {
+        try {
+          const urlObj = new URL(data.approval_url);
+          const t = urlObj.searchParams.get('token');
+          if (t) {
+            let myTokens = JSON.parse(localStorage.getItem('my_checkin_tokens') || '[]');
+            if (!myTokens.includes(t)) myTokens.push(t);
+            localStorage.setItem('my_checkin_tokens', JSON.stringify(myTokens));
+            document.cookie = `submitted_token_${t}=true; path=/; max-age=86400; SameSite=Lax`;
+          }
+        } catch (e) {}
+      }
 
       resultCard.className = 'result-card ok';
       resultIcon.textContent = '🎉';
@@ -659,7 +688,8 @@
             action_type: currentActionType,
             latitude: coords.latitude,
             longitude: coords.longitude,
-            photo: capturedPhotoBase64
+            photo: capturedPhotoBase64,
+            device_id: getOrCreateDeviceId()
           }),
         });
 
