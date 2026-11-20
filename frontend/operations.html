@@ -827,6 +827,22 @@
         if (r.status === 'approved') statusBadge = '<span class="badge badge-approved">Approved ✅</span>';
         if (r.status === 'rejected') statusBadge = '<span class="badge badge-rejected">Rejected ❌</span>';
 
+        let actionLinks = '';
+        if (r.status === 'pending' && r.approval_token) {
+          const appUrl = `${window.location.origin}/approve.html?token=${r.approval_token}`;
+          const cleanPhone = normalizeWhatsAppNumber(r.pic_whatsapp);
+          const typeTxt = r.action_type === 'time_out' ? 'Time Out 🔴' : 'Time In 🟢';
+          const msg = `🔔 *ATTENDANCE APPROVAL NEEDED* [${typeTxt}]\n\n👤 *Cleaner:* ${r.cleaner_name} (${r.employee_code})\n📍 *Site:* ${r.site_name}\n⏱️ *Action:* ${typeTxt}\n\n👉 *Review selfie & approve:*\n${appUrl}`;
+          const waLink = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}` : null;
+          
+          actionLinks = `
+            <div style="margin-top:4px; display:flex; gap:4px; flex-wrap:wrap;">
+              ${waLink ? `<a href="${waLink}" target="_blank" style="display:inline-block; font-size:0.72rem; background:#25d366; color:white; padding:2px 6px; border-radius:4px; text-decoration:none; font-weight:700;">💬 WA PIC</a>` : ''}
+              <a href="${appUrl}" target="_blank" style="display:inline-block; font-size:0.72rem; background:#3b82f6; color:white; padding:2px 6px; border-radius:4px; text-decoration:none; font-weight:700;">🔗 Approve</a>
+            </div>
+          `;
+        }
+
         const distStr = r.distance_meters !== null ? `${Math.round(r.distance_meters)}m` : '—';
         const remarkStr = r.remark ? `<span style="font-style:italic; font-size:0.85rem;">"${r.remark}"</span>` : '—';
 
@@ -838,7 +854,7 @@
             <td>${typeBadge}</td>
             <td>${r.site_name}</td>
             <td>${distStr}</td>
-            <td>${statusBadge}</td>
+            <td>${statusBadge}${actionLinks}</td>
             <td>${r.pic_name || '—'}</td>
             <td>${remarkStr}</td>
           </tr>

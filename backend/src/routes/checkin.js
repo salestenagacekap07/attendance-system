@@ -6,6 +6,13 @@ const { sendNotification } = require('../whatsapp');
 
 const router = express.Router();
 
+function formatWaDigits(raw) {
+  if (!raw) return '';
+  let digits = String(raw).replace(/\D/g, '');
+  if (digits.startsWith('0')) digits = '60' + digits.slice(1);
+  return digits;
+}
+
 /**
  * POST /checkin
  * body: { employee_code, latitude, longitude, photo }
@@ -87,50 +94,50 @@ router.post('/checkin', async (req, res) => {
       });
     }
 
+    const baseUrl = (process.env.PUBLIC_BASE_URL || 'https://attendance-system-rbay.onrender.com').replace(/\/+$/, '');
+    const approvalUrl = `${baseUrl}/approve.html?token=${token}`;
+    const formattedTime = new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' });
+
+    const waMessage =
+      `🔔 *ATTENDANCE APPROVAL NEEDED* [${typeLabel}]\n\n` +
+      `👤 *Cleaner:* ${cleaner.cleaner_name} (${cleaner.employee_code || employee_code})\n` +
+      `📍 *Site:* ${cleaner.site_name}\n` +
+      `⏱️ *Action:* ${typeText}\n` +
+      `🕒 *Time:* ${formattedTime}\n\n` +
+      `👉 *Click here to view selfie & APPROVE:*\n${approvalUrl}\n\n` +
+      `_Please tap the link to review selfie and verify attendance._`;
+
+    const picList = pics.map((pic) => {
+      const cleanPhone = formatWaDigits(pic.whatsapp_number);
+      return {
+        id: pic.id,
+        name: pic.name,
+        whatsapp_number: pic.whatsapp_number,
+        clean_number: cleanPhone,
+        share_url: `https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`,
+      };
+    });
+
+    // Best-effort background bot notification (non-blocking so response is instant)
+    for (const pic of pics) {
+      sendNotification(pic.whatsapp_number, waMessage, photo).catch((err) => {
+        console.warn('Background bot alert failed/skipped for PIC', pic.whatsapp_number, err.message);
+      });
+    }
+
     if (pics.length === 0) {
       return res.status(200).json({
         checkin_id: checkinId,
         action_type,
         status: 'pending',
         within_geofence: true,
-        message: `${typeText} recorded, but no PIC is configured for this site yet — approval could not be requested.`,
-      });
-    }
-
-    const approvalUrl = `${process.env.PUBLIC_BASE_URL}/approve.html?token=${token}`;
-    const message =
-      `Attendance approval needed [${typeLabel}]\n` +
-      `Cleaner: ${cleaner.cleaner_name}\n` +
-      `Action: ${typeText}\n` +
-      `Site: ${cleaner.site_name}\n` +
-      `Time: ${new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}\n\n` +
-      `Approve or reject here:\n${approvalUrl}\n\n` +
-      `This link expires once used.`;
-
-    let sentCount = 0;
-    let firstError = null;
-
-    for (const pic of pics) {
-      try {
-        await sendNotification(pic.whatsapp_number, message, photo);
-        sentCount += 1;
-      } catch (waErr) {
-        firstError = waErr;
-        console.error('Failed to send WhatsApp notification to PIC', pic.whatsapp_number, waErr);
-      }
-    }
-
-    if (sentCount === 0) {
-      return res.status(200).json({
-        checkin_id: checkinId,
-        action_type,
-        status: 'pending',
-        within_geofence: true,
+        distance_meters: Math.round(dist),
         site_name: cleaner.site_name,
         cleaner_name: cleaner.cleaner_name,
-        warning: `${typeText} recorded, but WhatsApp alert to PIC could not be sent (WhatsApp bot offline).`,
-        message: `${typeText} at ${cleaner.site_name}! (Attendance saved in system).`,
-        error: firstError ? String(firstError) : undefined,
+        employee_code: cleaner.employee_code || employee_code,
+        approval_url: approvalUrl,
+        pics: [],
+        message: `${typeText} recorded, but no PIC is currently configured for ${cleaner.site_name} in Operations.`,
       });
     }
 
@@ -140,10 +147,12 @@ router.post('/checkin', async (req, res) => {
       status: 'pending',
       within_geofence: true,
       distance_meters: Math.round(dist),
-      sent_to_pics: sentCount,
       site_name: cleaner.site_name,
       cleaner_name: cleaner.cleaner_name,
-      message: `${typeText} at ${cleaner.site_name}! Sent to PIC for approval.`,
+      employee_code: cleaner.employee_code || employee_code,
+      approval_url: approvalUrl,
+      pics: picList,
+      message: `${typeText} recorded at ${cleaner.site_name}! Please send verification to PIC.`,
     });
   } catch (err) {
     console.error('Error in /checkin', err);

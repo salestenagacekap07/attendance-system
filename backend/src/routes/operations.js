@@ -185,7 +185,7 @@ router.get('/api/operations/attendance', async function (req, res) {
     const { client_id, site_id, status, date, search } = req.query;
     let query = `
       SELECT ci.id, ci.cleaner_id, ci.site_id, ci.status, ci.action_type, ci.remark,
-             ci.distance_meters, ci.created_at, ci.decided_at,
+             ci.distance_meters, ci.created_at, ci.decided_at, ci.approval_token,
              cl.name AS cleaner_name, cl.employee_code,
              s.name AS site_name, s.client_id,
              c.name AS client_name,

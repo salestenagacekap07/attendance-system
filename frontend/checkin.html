@@ -207,7 +207,102 @@
     border-radius: 6px;
     cursor: pointer;
     width: 100%;
-    margin-top: 8px;
+    margin-top: 12px;
+  }
+
+  /* WhatsApp PIC Dispatch UI */
+  .wa-notify-box {
+    margin-top: 14px;
+    padding: 14px 16px;
+    background: #ffffff;
+    border: 2px solid #22c55e;
+    border-radius: 12px;
+    text-align: left;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+  }
+  .wa-notify-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .wa-notify-head .icon {
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+  .wa-notify-head .title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #15803d;
+  }
+  .wa-notify-sub {
+    font-size: 0.88rem;
+    color: #166534;
+    line-height: 1.4;
+    margin-bottom: 12px;
+  }
+  .wa-send-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #25d366;
+    color: #ffffff !important;
+    text-decoration: none;
+    font-size: 1.05rem;
+    font-weight: 700;
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin-top: 6px;
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
+    transition: transform 0.15s, background 0.15s;
+    text-align: center;
+  }
+  .wa-send-btn:hover {
+    background: #1eb857;
+    transform: translateY(-2px);
+  }
+  .wa-send-btn:active {
+    transform: translateY(0);
+  }
+  .wa-send-btn.multi {
+    font-size: 0.95rem;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .wa-actions-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed #bbf7d0;
+    font-size: 0.82rem;
+    color: #166534;
+  }
+  .copy-btn {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    color: #15803d;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .copy-btn:hover {
+    background: #dcfce7;
+  }
+  .wa-empty-box {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: #fffbeb;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    color: #92400e;
+    font-size: 0.88rem;
+    text-align: left;
   }
 </style>
 </head>
@@ -381,20 +476,101 @@
       resultTitle.textContent = isOut ? 'Time Out Recorded ! ✅' : 'Time In Recorded ! ✅';
       
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      let picHtml = '';
+      if (data.pics && data.pics.length === 1) {
+        const pic = data.pics[0];
+        picHtml = `
+          <div class="wa-notify-box">
+            <div class="wa-notify-head">
+              <span class="icon">📲</span>
+              <div>
+                <div class="title">Step 2: Send Approval to PIC</div>
+              </div>
+            </div>
+            <div class="wa-notify-sub">
+              Tap the green button below to send your selfie & verification link directly to PIC <strong>${pic.name}</strong> on WhatsApp:
+            </div>
+            <a href="${pic.share_url}" target="_blank" class="wa-send-btn">
+              💬 Open WhatsApp & Send to ${pic.name}
+            </a>
+            <div class="wa-actions-bar">
+              <span>PIC Number: <strong>+${pic.clean_number}</strong></span>
+              <button type="button" class="copy-btn" onclick="copyApprovalLink('${data.approval_url}')">📋 Copy Link</button>
+            </div>
+          </div>
+        `;
+      } else if (data.pics && data.pics.length > 1) {
+        picHtml = `
+          <div class="wa-notify-box">
+            <div class="wa-notify-head">
+              <span class="icon">📲</span>
+              <div>
+                <div class="title">Step 2: Select PIC on Duty</div>
+              </div>
+            </div>
+            <div class="wa-notify-sub">
+              Choose the PIC at <strong>${data.site_name}</strong> to send your attendance verification:
+            </div>
+            ${data.pics.map(p => `
+              <a href="${p.share_url}" target="_blank" class="wa-send-btn multi">
+                💬 Send to ${p.name} (+${p.clean_number})
+              </a>
+            `).join('')}
+            <div class="wa-actions-bar">
+              <span>Multiple PICs configured</span>
+              <button type="button" class="copy-btn" onclick="copyApprovalLink('${data.approval_url}')">📋 Copy Link</button>
+            </div>
+          </div>
+        `;
+      } else {
+        picHtml = `
+          <div class="wa-empty-box">
+            ℹ️ Attendance logged! Note: No PIC is currently assigned to <strong>${data.site_name}</strong> in Operations.
+          </div>
+        `;
+      }
+
       resultBody.innerHTML = `
-        <strong>Action:</strong> ${isOut ? 'Time Out 🔴' : 'Time In 🟢'}<br>
-        <strong>Cleaner:</strong> ${data.cleaner_name || code}<br>
-        <strong>Site:</strong> ${data.site_name || 'Assigned Site'}<br>
-        <strong>Time:</strong> ${timeStr}<br>
-        <span style="display:inline-block; margin-top:8px; font-size:0.9rem;">
-          ${data.sent_to_pics ? '✅ Live photo & attendance sent to PIC on WhatsApp.' : '✅ Attendance logged in system.'}
-        </span>
+        <div style="font-size:1.05rem; margin-bottom:4px;">
+          <strong>${data.cleaner_name || code}</strong> <code>${code}</code>
+        </div>
+        <div style="font-size:0.92rem; color:#166534; margin-bottom:8px;">
+          📍 <strong>${data.site_name || 'Assigned Site'}</strong> &bull; ⏱️ <strong>${isOut ? 'Time Out 🔴' : 'Time In 🟢'}</strong> at ${timeStr}
+        </div>
+        ${picHtml}
       `;
 
       resultAction.innerHTML = `
         <button type="button" class="reset-btn" onclick="resetForm()">Clock In / Out Another Cleaner</button>
       `;
       resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    window.copyApprovalLink = function(url) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+          alert('Approval link copied to clipboard!');
+        }).catch(() => fallbackCopy(url));
+      } else {
+        fallbackCopy(url);
+      }
+    };
+
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        alert('Approval link copied to clipboard!');
+      } catch (e) {
+        prompt('Copy this approval link:', text);
+      }
+      document.body.removeChild(ta);
     }
 
     function showFailure(message) {
