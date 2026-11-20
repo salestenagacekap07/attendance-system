@@ -26,6 +26,7 @@ const {
   proto,
   makeCacheableSignalKeyStore,
   Browsers,
+  fetchLatestBaileysVersion,
 } = require('@whiskeysockets/baileys');
 const NodeCacheModule = require('@cacheable/node-cache');
 const NodeCache = NodeCacheModule.NodeCache || NodeCacheModule.default || NodeCacheModule;
@@ -301,7 +302,14 @@ async function connectWhatsApp() {
   }
 
   const logger = pino({ level: 'warn' });
+  const { version, isLatest } = await fetchLatestBaileysVersion().catch(() => ({
+    version: [2, 3000, 1043857760],
+    isLatest: true,
+  }));
+  console.log(`Connecting to WhatsApp with version [${version.join('.')}] (isLatest: ${isLatest})`);
+
   sock = makeWASocket({
+    version,
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, logger),
@@ -311,6 +319,8 @@ async function connectWhatsApp() {
     msgRetryCounterCache,
     syncFullHistory: false,
     markOnlineOnConnect: true,
+    generateHighQualityLinkPreview: false,
+    shouldIgnoreJid: (jid) => jid?.endsWith('@broadcast') || jid?.includes('newsletter'),
     printQRInTerminal: false, // we handle QR display ourselves below
     getMessage: async (key) => {
       if (!key || !key.id) return undefined;
