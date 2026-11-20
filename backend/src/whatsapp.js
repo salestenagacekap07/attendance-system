@@ -389,7 +389,7 @@ async function connectWhatsApp() {
       console.log('WhatsApp connection closed.', { statusCode, shouldReconnect });
 
       if (shouldReconnect) {
-        connectWhatsApp();
+        setTimeout(() => connectWhatsApp(), 3000);
       } else {
         console.log('Logged out from WhatsApp. Clearing session to allow re-linking.');
         if (process.env.DATABASE_URL) {
@@ -402,11 +402,34 @@ async function connectWhatsApp() {
   return sock;
 }
 
+async function resetWhatsAppSession() {
+  isReady = false;
+  if (sock) {
+    try {
+      sock.ev.removeAllListeners();
+      sock.end();
+    } catch (e) {
+      console.warn('Error ending socket on reset:', e.message);
+    }
+    sock = null;
+  }
+  if (process.env.DATABASE_URL) {
+    try {
+      await pool.query('DELETE FROM whatsapp_auth');
+    } catch (e) {
+      console.warn('Error clearing whatsapp_auth on reset:', e.message);
+    }
+  }
+  await connectWhatsApp();
+  return true;
+}
+
 module.exports = {
   connectWhatsApp,
   sendText,
   sendNotification,
   requestPairingCode,
+  resetWhatsAppSession,
   isReady: () => isReady,
   getSocket: () => sock,
 };
