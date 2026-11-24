@@ -674,7 +674,7 @@
         <!-- Formula Callout -->
         <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:0.83rem; color:#475569;">
           <strong>🧮 Salary Rules Active:</strong> 
-          Per Day = Base Salary ÷ Auto-Counted Working Days | Net Hours = Gross Hours − Break (Unpaid) | Per Hour = Per Day ÷ Net Hours | Late: Deduct Per Hour × Late Hours | Absent: Deduct 1× Per Day | Half Day: Deduct 0.5× Per Day | OT: 1.5× Hourly Rate.
+          Per Day = Base Salary ÷ Auto-Counted Working Days | Net Hours = Gross Hours − Break (Unpaid) | Per Hour = Per Day ÷ Net Hours | Late: Deduct Per Hour × Late Hours | Absent: Deduct 1× Per Day | Half Day: Deduct 0.5× Per Day | <strong>OT Rates: 1.5× Hourly Rate (Mon–Sat) & 2.0× Hourly Rate (Sunday / Public Holiday)</strong>.
         </div>
 
         <!-- Payroll Breakdown Table -->
@@ -1595,7 +1595,8 @@
               <td>RM ${p.per_hour_salary.toFixed(2)}</td>
               <td style="font-size:0.8rem;">
                 🟢 ${att.present_days}d | 🔴 ${att.absent_days}d | 🟡 ${att.half_days}d<br/>
-                Late: <strong>${att.total_late_hours}h</strong> | OT: <strong>${att.total_ot_hours}h</strong>
+                Late: <strong>${att.total_late_hours}h</strong><br/>
+                OT Total: <strong>${att.total_ot_hours}h</strong>
               </td>
               <td style="color:#dc2626; font-size:0.82rem;">
                 ${ded.absent > 0 ? `Absent: -RM ${ded.absent.toFixed(2)}<br/>` : ''}
@@ -1603,7 +1604,12 @@
                 ${ded.late > 0 ? `Late: -RM ${ded.late.toFixed(2)}<br/>` : ''}
                 <strong>Total Ded: -RM ${ded.total.toFixed(2)}</strong>
               </td>
-              <td style="color:#7c3aed; font-weight:700;">+RM ${p.ot_pay.toFixed(2)}</td>
+              <td style="color:#7c3aed; font-size:0.82rem;">
+                <strong style="font-size:0.95rem;">+RM ${p.ot_pay.toFixed(2)}</strong><br/>
+                ${p.ot_breakdown?.normal_hours > 0 ? `<span style="color:#475569;">Mon–Sat (1.5x): ${p.ot_breakdown.normal_hours}h = +RM ${p.ot_breakdown.normal_pay.toFixed(2)}</span><br/>` : ''}
+                ${p.ot_breakdown?.rest_ph_hours > 0 ? `<span style="color:#b45309; font-weight:700;">Sun/PH (2.0x): ${p.ot_breakdown.rest_ph_hours}h = +RM ${p.ot_breakdown.rest_ph_pay.toFixed(2)}</span>` : ''}
+                ${(!p.ot_breakdown?.normal_hours && !p.ot_breakdown?.rest_ph_hours) ? '<span style="color:#94a3b8;">No OT</span>' : ''}
+              </td>
               <td style="background:#f1f5f9; font-size:1.05rem; font-weight:800; color:#1e3a8a;">
                 RM ${p.net_salary.toFixed(2)}
               </td>
@@ -1655,7 +1661,7 @@
         👥 <strong>Workers Count:</strong> ${currentPayroll.workers_payroll.length}<br/>
         💵 <strong>Gross Base Total:</strong> RM ${currentPayroll.totals.total_gross.toFixed(2)}<br/>
         🔻 <strong>Total Deductions:</strong> RM ${currentPayroll.totals.total_deductions.toFixed(2)}<br/>
-        ⭐ <strong>Total OT Pay:</strong> RM ${currentPayroll.totals.total_ot_pay.toFixed(2)}<br/>
+        ⭐ <strong>Total OT Pay (1.5x Mon-Sat + 2.0x Sun/PH):</strong> RM ${currentPayroll.totals.total_ot_pay.toFixed(2)}<br/>
         💰 <strong>Final Net Payable:</strong> <span style="font-size:1rem; font-weight:800; color:#166534;">RM ${currentPayroll.totals.total_net.toFixed(2)}</span>
       `;
       openModal('emailModal');

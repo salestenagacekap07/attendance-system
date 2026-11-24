@@ -13,8 +13,9 @@
  *    - Absent 1 Day = Deduct 1 x Per Day Salary
  *    - Half Day = Deduct 0.5 x Per Day Salary
  *    - Late: Deduct Per Hour Salary x Late Hours
- * - Additions:
- *    - OT: OT Hours x (Per Hour Salary * 1.5)
+ * - OT Additions:
+ *    - Normal Days (Mon - Sat): 1.5x Hourly Rate
+ *    - Rest Days (Sunday) & Public Holidays (PH): 2.0x Hourly Rate
  */
 
 function parseTimeToHours(timeStr) {
@@ -30,6 +31,24 @@ function calculateWorkingHours(startTime, endTime, breakMinutes = 60) {
   const breakHours = (Number(breakMinutes) || 0) / 60;
   const net = Math.max(1, gross - breakHours);
   return { gross: Number(gross.toFixed(2)), net: Number(net.toFixed(2)) };
+}
+
+function getDateDetails(dateStr) {
+  if (!dateStr) return { dateStr: '', dayOfWeek: -1, isSunday: false, isSaturday: false };
+  const clean = String(dateStr).substring(0, 10);
+  const parts = clean.split('-').map(Number);
+  if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) {
+    return { dateStr: clean, dayOfWeek: -1, isSunday: false, isSaturday: false };
+  }
+  const [y, m, d] = parts;
+  const dt = new Date(y, m - 1, d);
+  const dayOfWeek = dt.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  return {
+    dateStr: clean,
+    dayOfWeek,
+    isSunday: dayOfWeek === 0,
+    isSaturday: dayOfWeek === 6
+  };
 }
 
 /**
@@ -128,7 +147,8 @@ function calculateWorkerSalary({
   let halfDays = 0;
   let leaveDays = 0;
   let otDays = 0;
-  let totalOtHours = 0;
+  let normalOtHours = 0;      // Mon - Sat (1.5x)
+  let restDayPhOtHours = 0;   // Sunday & Public Holiday (2.0x)
   let totalLateHours = 0;
 
   attendanceRecords.forEach(r => {
@@ -142,15 +162,35 @@ function calculateWorkerSalary({
       presentDays++; // OT day is also a day worked
     }
 
-    totalOtHours += Number(r.ot_hours) || 0;
+    const { dateStr, isSunday } = getDateDetails(r.attendance_date);
+    const isPH = phDateSet.has(dateStr);
+    const isRestDayOrPH = isSunday || isPH;
+
+    let otVal = Number(r.ot_hours) || 0;
+    // If status is OT and ot_hours wasn't explicitly set, default to net working hours
+    if (status === 'OT' && otVal === 0 && r.in_time && r.out_time) {
+      const { net } = calculateWorkingHours(r.in_time, r.out_time, site.break_time_minutes || 60);
+      otVal = net;
+    }
+
+    if (isRestDayOrPH) {
+      restDayPhOtHours += otVal;
+    } else {
+      normalOtHours += otVal;
+    }
+
     totalLateHours += Number(r.late_hours) || 0;
   });
+
+  const totalOtHours = normalOtHours + restDayPhOtHours;
 
   let perDaySalary = 0;
   let perHourSalary = 0;
   let absentDeduction = 0;
   let halfDayDeduction = 0;
   let lateDeduction = 0;
+  let normalOtPay = 0;
+  let restDayPhOtPay = 0;
   let otPay = 0;
   let grossSalary = 0;
   let netSalary = 0;
@@ -168,8 +208,12 @@ function calculateWorkerSalary({
     lateDeduction = Number((totalLateHours * perHourSalary).toFixed(2));
     const totalDeductions = Number((absentDeduction + halfDayDeduction + lateDeduction).toFixed(2));
 
-    // OT Pay: OT Hours * (Per Hour Salary * 1.5)
-    otPay = Number((totalOtHours * (perHourSalary * 1.5)).toFixed(2));
+    // OT Pay:
+    // Normal Days (Mon - Sat): 1.5x Hourly Rate
+    // Sunday & Public Holiday (PH): 2.0x Hourly Rate
+    normalOtPay = Number((normalOtHours * perHourSalary * 1.5).toFixed(2));
+    restDayPhOtPay = Number((restDayPhOtHours * perHourSalary * 2.0).toFixed(2));
+    otPay = Number((normalOtPay + restDayPhOtPay).toFixed(2));
 
     grossSalary = baseSalary;
     netSalary = Number(Math.max(0, baseSalary - totalDeductions + otPay).toFixed(2));
@@ -194,6 +238,8 @@ function calculateWorkerSalary({
         half_days: halfDays,
         leave_days: leaveDays,
         ot_days: otDays,
+        normal_ot_hours: Number(normalOtHours.toFixed(2)),
+        rest_day_ph_ot_hours: Number(restDayPhOtHours.toFixed(2)),
         total_ot_hours: Number(totalOtHours.toFixed(2)),
         total_late_hours: Number(totalLateHours.toFixed(2))
       },
@@ -202,6 +248,12 @@ function calculateWorkerSalary({
         half_day: halfDayDeduction,
         late: lateDeduction,
         total: totalDeductions
+      },
+      ot_breakdown: {
+        normal_hours: Number(normalOtHours.toFixed(2)),
+        normal_pay: normalOtPay,
+        rest_ph_hours: Number(restDayPhOtHours.toFixed(2)),
+        rest_ph_pay: restDayPhOtPay
       },
       ot_pay: otPay,
       gross_salary: grossSalary,
@@ -217,7 +269,13 @@ function calculateWorkerSalary({
     grossSalary = Number((earnedDays * dailyRate).toFixed(2));
 
     lateDeduction = Number((totalLateHours * perHourSalary).toFixed(2));
-    otPay = Number((totalOtHours * (perHourSalary * 1.5)).toFixed(2));
+
+    // OT Pay:
+    // Normal Days (Mon - Sat): 1.5x Hourly Rate
+    // Sunday & Public Holiday (PH): 2.0x Hourly Rate
+    normalOtPay = Number((normalOtHours * perHourSalary * 1.5).toFixed(2));
+    restDayPhOtPay = Number((restDayPhOtHours * perHourSalary * 2.0).toFixed(2));
+    otPay = Number((normalOtPay + restDayPhOtPay).toFixed(2));
 
     const totalDeductions = lateDeduction;
     netSalary = Number(Math.max(0, grossSalary - lateDeduction + otPay).toFixed(2));
@@ -242,6 +300,8 @@ function calculateWorkerSalary({
         half_days: halfDays,
         leave_days: leaveDays,
         ot_days: otDays,
+        normal_ot_hours: Number(normalOtHours.toFixed(2)),
+        rest_day_ph_ot_hours: Number(restDayPhOtHours.toFixed(2)),
         total_ot_hours: Number(totalOtHours.toFixed(2)),
         total_late_hours: Number(totalLateHours.toFixed(2))
       },
@@ -250,6 +310,12 @@ function calculateWorkerSalary({
         half_day: 0,
         late: lateDeduction,
         total: totalDeductions
+      },
+      ot_breakdown: {
+        normal_hours: Number(normalOtHours.toFixed(2)),
+        normal_pay: normalOtPay,
+        rest_ph_hours: Number(restDayPhOtHours.toFixed(2)),
+        rest_ph_pay: restDayPhOtPay
       },
       ot_pay: otPay,
       gross_salary: grossSalary,
@@ -261,5 +327,6 @@ function calculateWorkerSalary({
 module.exports = {
   calculateWorkingHours,
   getMonthlyWorkingDays,
-  calculateWorkerSalary
+  calculateWorkerSalary,
+  getDateDetails
 };
