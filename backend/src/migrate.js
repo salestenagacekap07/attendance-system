@@ -116,6 +116,24 @@ async function migrate() {
       `, [d, n]);
     }
 
+    // Fixed national holidays for future years (2027 through 2046)
+    const fixedHolidays = [
+      { m: '01', d: '01', name: 'New Year Day' },
+      { m: '05', d: '01', name: 'Labour Day' },
+      { m: '08', d: '31', name: 'National Day (Merdeka)' },
+      { m: '09', d: '16', name: 'Malaysia Day' },
+      { m: '12', d: '25', name: 'Christmas Day' }
+    ];
+    for (let y = 2027; y <= 2046; y++) {
+      for (const h of fixedHolidays) {
+        await client.query(`
+          INSERT INTO public_holidays (holiday_date, name)
+          VALUES ($1, $2)
+          ON CONFLICT (holiday_date) DO NOTHING;
+        `, [`${y}-${h.m}-${h.d}`, h.name]);
+      }
+    }
+
     // 5. Create payroll_reports table
     await client.query(`
       CREATE TABLE IF NOT EXISTS payroll_reports (
