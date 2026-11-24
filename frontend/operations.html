@@ -598,6 +598,7 @@
           <span style="width:8px; height:8px; border-radius:50%; background:#16a34a; display:inline-block;"></span>
           1-Tap WhatsApp & GPS Sync Live
         </span>
+        <button type="button" class="btn-secondary" id="btnTopManageHolidays">🇲🇾 Public Holidays</button>
         <button type="button" class="btn-secondary" id="refreshBtn">🔄 Refresh Data</button>
       </div>
     </div>
@@ -752,6 +753,7 @@
             </p>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-secondary" id="openManageHolidaysBtn" title="Manage Malaysian national & state public holidays">🇲🇾 Public Holidays</button>
             <button type="button" class="btn-success" id="btnAutoGenerateMonth" title="Auto-populate standard working days for all workers at this site">⚡ Auto-Generate Monthly Schedule</button>
             <button type="button" class="btn-accent" id="openUpdateAttBtn">✍️ Update Worker Attendance</button>
           </div>
@@ -1366,6 +1368,72 @@
           </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: MANAGE MALAYSIAN PUBLIC HOLIDAYS -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="holidaysModal">
+    <div class="modal-box" style="max-width: 720px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🇲🇾 Malaysian Public Holidays Manager</h3>
+        <button type="button" class="modal-close" onclick="closeModal('holidaysModal')">&times;</button>
+      </div>
+      <p style="font-size:0.85rem; color:var(--muted); margin-top:-8px; margin-bottom:16px;">
+        View, add, or remove gazetted national, state, and ad-hoc public holidays (e.g. Sultan's Birthday, FT Day, Nuzul Al-Quran).
+        These automatically exclude standard working days from salary calculations, and grant 2.0× OT if worked.
+      </p>
+
+      <!-- Year Filter -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; background:#f8fafc; padding:10px 14px; border-radius:8px; border:1px solid var(--border); flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-weight:700; font-size:0.88rem;">Filter Year:</span>
+          <select id="holidayYearFilter" style="width:auto; min-width:120px; font-weight:700; padding:6px 10px;">
+            <!-- dynamically populated -->
+          </select>
+        </div>
+        <span id="holidayCountBadge" class="badge badge-monthly">0 Holidays Listed</span>
+      </div>
+
+      <!-- Add New Holiday Form -->
+      <form id="addHolidayForm" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:14px; margin-bottom:16px;">
+        <div style="font-weight:700; font-size:0.88rem; color:#1e40af; margin-bottom:8px;">➕ Add State or Special Public Holiday:</div>
+        <div class="form-grid-2">
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="newHolidayDate" style="font-size:0.8rem;">Holiday Date</label>
+            <input type="date" id="newHolidayDate" required />
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="newHolidayName" style="font-size:0.8rem;">Holiday Name</label>
+            <input type="text" id="newHolidayName" placeholder="e.g. Sultan of Selangor Birthday" required />
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+          <button type="submit" class="btn-success btn-sm" id="btnSubmitHoliday">Save Holiday</button>
+        </div>
+      </form>
+
+      <!-- Holidays Table -->
+      <div class="table-container" style="max-height:360px; overflow-y:auto; margin-top:0;">
+        <table id="holidaysTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Day of Week</th>
+              <th>Holiday Name</th>
+              <th style="text-align:right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="holidaysTableBody">
+            <tr><td colspan="4" style="text-align:center; color:var(--muted); padding:20px;">Loading public holidays...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+        <button type="button" class="btn-secondary" onclick="closeModal('holidaysModal')">Close</button>
+      </div>
     </div>
   </div>
 
@@ -2318,8 +2386,133 @@
       showToast('🔄 Dashboard refreshed with latest live data.');
     });
 
+    // ==========================================
+    // PUBLIC HOLIDAYS MANAGEMENT
+    // ==========================================
+    let cachedHolidays = [];
+
+    function populateHolidayYearFilter() {
+      const select = document.getElementById('holidayYearFilter');
+      if (!select || select.options.length > 0) return;
+      const currentYear = new Date().getFullYear();
+      let html = `<option value="">-- All Years --</option>`;
+      for (let y = 2025; y <= 2046; y++) {
+        html += `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`;
+      }
+      select.innerHTML = html;
+    }
+
+    async function loadPublicHolidays(yearParam) {
+      const year = yearParam !== undefined ? yearParam : document.getElementById('holidayYearFilter').value;
+      const tbody = document.getElementById('holidaysTableBody');
+      const badge = document.getElementById('holidayCountBadge');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:20px;">Loading public holidays...</td></tr>';
+
+      try {
+        const url = year ? `/api/operations/public-holidays?year=${year}` : '/api/operations/public-holidays';
+        const res = await fetch(url);
+        const data = await res.json();
+        cachedHolidays = data.public_holidays || [];
+
+        badge.textContent = `${cachedHolidays.length} Holidays Listed`;
+
+        if (!cachedHolidays.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:20px;">No public holidays found for this year.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = cachedHolidays.map(h => {
+          const dtParts = h.holiday_date.split('-');
+          const dt = new Date(Number(dtParts[0]), Number(dtParts[1]) - 1, Number(dtParts[2]));
+          const dayName = dt.toLocaleDateString('en-MY', { weekday: 'long' });
+
+          return `
+            <tr>
+              <td><strong style="font-family:monospace; color:#1e3a8a;">${h.holiday_date}</strong></td>
+              <td><span class="badge badge-leave">${dayName}</span></td>
+              <td><strong>${h.name}</strong></td>
+              <td style="text-align:right;">
+                <button type="button" class="btn-danger btn-sm" onclick="deletePublicHoliday(${h.id}, '${h.name.replace(/'/g, "\\'")}', '${h.holiday_date}')">🗑️ Delete</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red; padding:16px;">Failed to load holidays: ${err.message}</td></tr>`;
+      }
+    }
+
+    window.deletePublicHoliday = async function(id, name, date) {
+      if (!confirm(`Are you sure you want to remove "${name}" on ${date} from public holidays?`)) return;
+      try {
+        const res = await fetch(`/api/operations/public-holidays/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Failed to delete holiday.');
+          return;
+        }
+        showToast(`🗑️ ${data.message || 'Public holiday removed.'}`);
+        await loadPublicHolidays();
+        loadAttendanceSheet();
+        calculatePayroll();
+      } catch (err) {
+        alert('Network error deleting holiday.');
+      }
+    };
+
+    document.getElementById('holidayYearFilter').addEventListener('change', (e) => {
+      loadPublicHolidays(e.target.value);
+    });
+
+    document.getElementById('addHolidayForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const dateVal = document.getElementById('newHolidayDate').value;
+      const nameVal = document.getElementById('newHolidayName').value.trim();
+      const btn = document.getElementById('btnSubmitHoliday');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      try {
+        const res = await fetch('/api/operations/public-holidays', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ holiday_date: dateVal, name: nameVal })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Failed to save holiday.');
+          return;
+        }
+        showToast(`✅ ${data.message || 'Holiday saved!'}`);
+        document.getElementById('addHolidayForm').reset();
+        const addedYear = dateVal.split('-')[0];
+        document.getElementById('holidayYearFilter').value = addedYear;
+        await loadPublicHolidays(addedYear);
+        loadAttendanceSheet();
+        calculatePayroll();
+      } catch (err) {
+        alert('Network error saving holiday.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Holiday';
+      }
+    });
+
+    const openHolidaysModalHandler = () => {
+      populateHolidayYearFilter();
+      const currentYear = document.getElementById('attYearSelect')?.value || new Date().getFullYear();
+      document.getElementById('holidayYearFilter').value = String(currentYear);
+      document.getElementById('newHolidayDate').value = `${currentYear}-01-01`;
+      openModal('holidaysModal');
+      loadPublicHolidays(String(currentYear));
+    };
+
+    document.getElementById('btnTopManageHolidays').addEventListener('click', openHolidaysModalHandler);
+    document.getElementById('openManageHolidaysBtn').addEventListener('click', openHolidaysModalHandler);
+
     // Initialize Dashboard
     async function init() {
+      populateHolidayYearFilter();
       const now = new Date();
       document.getElementById('attMonthSelect').value = String(now.getMonth() + 1);
       document.getElementById('payrollMonthSelect').value = String(now.getMonth() + 1);

@@ -556,6 +556,76 @@ router.post('/api/operations/attendance/generate-month', async function (req, re
   }
 });
 
+// ==========================================
+// PUBLIC HOLIDAYS MANAGEMENT (CRUD)
+// ==========================================
+router.get('/api/operations/public-holidays', async function (req, res) {
+  try {
+    const { year } = req.query;
+    let query = 'SELECT id, holiday_date::text AS holiday_date, name FROM public_holidays';
+    const params = [];
+    if (year) {
+      query += ' WHERE holiday_date >= $1 AND holiday_date <= $2';
+      params.push(`${year}-01-01`, `${year}-12-31`);
+    }
+    query += ' ORDER BY holiday_date ASC';
+    const result = await pool.query(query, params);
+    return res.json({ public_holidays: result.rows });
+  } catch (error) {
+    console.error('Error in GET /api/operations/public-holidays', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/api/operations/public-holidays', async function (req, res) {
+  try {
+    const { holiday_date, name } = req.body || {};
+    if (!holiday_date || !name) {
+      return res.status(400).json({ error: 'holiday_date (YYYY-MM-DD) and name are required' });
+    }
+    const cleanDate = String(holiday_date).trim().substring(0, 10);
+    const cleanName = String(name).trim();
+
+    const insertRes = await pool.query(
+      `INSERT INTO public_holidays (holiday_date, name)
+       VALUES ($1, $2)
+       ON CONFLICT (holiday_date) DO UPDATE SET name = EXCLUDED.name
+       RETURNING id, holiday_date::text AS holiday_date, name`,
+      [cleanDate, cleanName]
+    );
+
+    return res.json({
+      success: true,
+      message: `Public holiday "${cleanName}" (${cleanDate}) saved successfully.`,
+      holiday: insertRes.rows[0]
+    });
+  } catch (error) {
+    console.error('Error in POST /api/operations/public-holidays', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/api/operations/public-holidays/:id', async function (req, res) {
+  try {
+    const { id } = req.params;
+    const deleteRes = await pool.query(
+      'DELETE FROM public_holidays WHERE id = $1 RETURNING id, holiday_date::text AS holiday_date, name',
+      [Number(id)]
+    );
+    if (deleteRes.rowCount === 0) {
+      return res.status(404).json({ error: 'Public holiday not found' });
+    }
+    return res.json({
+      success: true,
+      message: `Public holiday "${deleteRes.rows[0].name}" removed.`,
+      holiday: deleteRes.rows[0]
+    });
+  } catch (error) {
+    console.error('Error in DELETE /api/operations/public-holidays', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 // Update Worker Attendance Daily
 router.post('/api/operations/attendance', async function (req, res) {
   try {
