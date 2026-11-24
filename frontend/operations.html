@@ -368,6 +368,123 @@
       box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
     }
 
+    /* Mobile Responsive Optimizations (Pure CSS - 100% Safe, will NOT break backend or database) */
+    @media (max-width: 768px) {
+      .container {
+        padding: 12px 12px 60px;
+      }
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .top-actions {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .top-actions .btn {
+        flex: 1 1 calc(50% - 4px);
+        text-align: center;
+        justify-content: center;
+        padding: 10px 8px;
+        font-size: 0.8rem;
+      }
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .kpi-card {
+        padding: 12px;
+      }
+      .kpi-val {
+        font-size: 1.4rem;
+      }
+      .tabs-bar {
+        gap: 4px;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .tab-btn {
+        padding: 9px 12px;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+      }
+      .panel {
+        padding: 16px 12px;
+        border-radius: 10px;
+      }
+      .panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .panel-header > div:last-child {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .panel-header > div:last-child button {
+        width: 100%;
+      }
+      .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px;
+      }
+      .filter-bar > * {
+        width: 100% !important;
+      }
+      .form-grid-2, .form-grid-3 {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      /* Prevent iOS Safari auto-zoom on input focus */
+      input, select, textarea {
+        font-size: 16px !important;
+        padding: 10px 12px;
+      }
+      .modal-backdrop {
+        padding: 10px;
+        align-items: flex-end;
+      }
+      .modal-box {
+        padding: 18px 14px;
+        border-radius: 14px;
+        max-height: 94vh;
+        width: 100%;
+      }
+      .table-container {
+        -webkit-overflow-scrolling: touch;
+        margin-top: 10px;
+      }
+      th, td {
+        padding: 9px 10px;
+        font-size: 0.8rem;
+      }
+      #toast {
+        left: 12px;
+        right: 12px;
+        bottom: 16px;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+      h1 {
+        font-size: 1.2rem;
+      }
+      .top-actions .btn {
+        flex: 1 1 100%;
+      }
+    }
+
     /* Dedicated 1-Page Printable Report (Landscape A4) */
     #printReportView {
       display: none;
