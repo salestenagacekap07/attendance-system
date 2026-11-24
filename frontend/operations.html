@@ -3,40 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Operations Attendance Dashboard & PIC Manager</title>
+  <title>OPS Dashboard — Facility & Cleaning Operations (Malaysia)</title>
   <style>
     :root {
       --bg: #f8fafc;
       --card: #ffffff;
       --primary: #1e3a8a;
       --primary-hover: #1e40af;
+      --accent: #0284c7;
       --text: #0f172a;
       --muted: #64748b;
       --border: #e2e8f0;
-      --success: #166534;
+      --success: #16a34a;
       --success-bg: #dcfce7;
-      --warning: #92400e;
+      --warning: #d97706;
       --warning-bg: #fef3c7;
-      --danger: #991b1b;
+      --danger: #dc2626;
       --danger-bg: #fee2e2;
-      --orange: #c2410c;
-      --orange-bg: #ffedd5;
+      --purple: #7c3aed;
+      --purple-bg: #f3e8ff;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.5;
     }
     .container {
-      max-width: 1400px;
-      margin: 24px auto;
-      padding: 0 20px 60px;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 20px 24px 80px;
     }
-    
-    /* Topbar */
+
+    /* Header & Navigation */
     .topbar {
       display: flex;
       justify-content: space-between;
@@ -44,153 +45,188 @@
       margin-bottom: 20px;
       flex-wrap: wrap;
       gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-icon {
+      font-size: 2rem;
+      background: #eff6ff;
+      border-radius: 12px;
+      padding: 6px 12px;
+      border: 1px solid #bfdbfe;
     }
     h1 {
       margin: 0;
-      font-size: 1.6rem;
+      font-size: 1.5rem;
       font-weight: 800;
       color: #0f172a;
+      letter-spacing: -0.5px;
     }
-    .live-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+    .brand-sub {
       font-size: 0.85rem;
-      color: #166534;
-      background: #dcfce7;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-weight: 600;
+      color: var(--muted);
+      margin-top: 2px;
     }
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #16a34a;
-      display: inline-block;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0% { transform: scale(0.95); opacity: 0.7; }
-      50% { transform: scale(1.3); opacity: 1; }
-      100% { transform: scale(0.95); opacity: 0.7; }
-    }
-    
-    .actions {
+    .top-actions {
       display: flex;
       align-items: center;
       gap: 10px;
     }
-    button {
+
+    /* KPI Summary Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .kpi-card:hover {
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .kpi-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .kpi-val {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .kpi-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* Tab Navigation */
+    .tabs-bar {
+      display: flex;
+      gap: 8px;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 24px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .tab-btn {
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      padding: 12px 18px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: all 0.2s;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+    }
+    .tab-btn:hover {
+      color: var(--primary);
+      background: #f1f5f9;
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: #ffffff;
+      font-weight: 700;
+    }
+
+    /* Content Cards */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .panel-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-desc {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin: 4px 0 0;
+    }
+
+    /* Buttons */
+    button, .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
       background: var(--primary);
       color: white;
       border: none;
       border-radius: 8px;
-      padding: 10px 16px;
-      font-size: 0.9rem;
+      padding: 9px 16px;
+      font-size: 0.88rem;
       cursor: pointer;
       font-weight: 600;
-      transition: background 0.2s;
+      transition: background 0.15s, transform 0.05s;
+      text-decoration: none;
     }
-    button:hover { background: var(--primary-hover); }
+    button:hover, .btn:hover { background: var(--primary-hover); }
+    button:active, .btn:active { transform: translateY(1px); }
     .btn-secondary { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
     .btn-secondary:hover { background: #e2e8f0; }
     .btn-success { background: #16a34a; }
     .btn-success:hover { background: #15803d; }
     .btn-danger { background: #dc2626; color: white; }
     .btn-danger:hover { background: #b91c1c; }
-    .btn-ghost { background: transparent; color: #64748b; border: 1px solid #cbd5e1; }
-    .btn-ghost:hover { background: #f8fafc; color: #0f172a; }
-
-    /* Cards & Sections */
-    .card-section {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 24px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-    .section-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      margin: 0 0 4px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .section-desc {
-      color: var(--muted);
-      font-size: 0.88rem;
-      margin: 0 0 16px;
-    }
-
-    /* Metric Summary */
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 14px;
-      margin-bottom: 24px;
-    }
-    .summary-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-    }
-    .summary-card .label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 6px;
-    }
-    .summary-card .val {
-      font-size: 1.8rem;
-      font-weight: 800;
-      color: #0f172a;
-    }
-
-    /* Forms & Filters */
-    .filter-grid, .inline-form {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-    }
-    label {
-      display: block;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #475569;
-      margin-bottom: 5px;
-    }
-    select, input[type="text"], input[type="date"], input[type="tel"] {
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 12px;
-      font-size: 0.95rem;
-      background: #ffffff;
-      outline: none;
-    }
-    select:focus, input:focus {
-      border-color: #0284c7;
-    }
+    .btn-accent { background: var(--accent); }
+    .btn-accent:hover { background: #0369a1; }
+    .btn-sm { padding: 5px 10px; font-size: 0.8rem; border-radius: 6px; }
 
     /* Tables */
-    .table-responsive {
+    .table-container {
       width: 100%;
       overflow-x: auto;
-      margin-top: 14px;
       border: 1px solid var(--border);
       border-radius: 8px;
+      margin-top: 14px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       text-align: left;
     }
     th, td {
@@ -203,723 +239,1586 @@
       color: var(--muted);
       white-space: nowrap;
     }
-    tr:last-child td { border-bottom: none; }
     tbody tr:hover { background: #fdfdfd; }
+    tr:last-child td { border-bottom: none; }
 
     /* Badges */
     .badge {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
       border-radius: 999px;
       padding: 3px 8px;
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       font-weight: 700;
       white-space: nowrap;
     }
-    .badge-in { background: var(--success-bg); color: var(--success); }
-    .badge-out { background: var(--orange-bg); color: var(--orange); }
-    .badge-pending { background: var(--warning-bg); color: var(--warning); }
-    .badge-approved { background: var(--success-bg); color: var(--success); }
-    .badge-rejected { background: var(--danger-bg); color: var(--danger); }
-    
-    /* View Switcher Tabs */
-    .tab-nav {
+    .badge-present { background: var(--success-bg); color: var(--success); }
+    .badge-absent { background: var(--danger-bg); color: var(--danger); }
+    .badge-halfday { background: var(--warning-bg); color: var(--warning); }
+    .badge-leave { background: #f1f5f9; color: #475569; }
+    .badge-ot { background: var(--purple-bg); color: var(--purple); }
+    .badge-monthly { background: #e0f2fe; color: #0369a1; }
+    .badge-daily { background: #fef3c7; color: #b45309; }
+
+    /* Form & Filter Controls */
+    .filter-bar {
       display: flex;
-      gap: 8px;
-      margin-bottom: 14px;
-      border-bottom: 2px solid #e2e8f0;
-      padding-bottom: 8px;
-    }
-    .tab-btn {
-      background: transparent;
-      color: #64748b;
-      border: none;
-      padding: 8px 14px;
-      font-size: 0.92rem;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .tab-btn.active {
-      background: #e0f2fe;
-      color: #0284c7;
-      font-weight: 700;
-    }
-
-    /* Toast Message */
-    #toast {
-      display: none;
-      padding: 12px 16px;
-      background: #dcfce7;
-      color: #166534;
-      border: 1px solid #86efac;
-      border-radius: 8px;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
       margin-bottom: 16px;
+      background: #f8fafc;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      font-size: 0.82rem;
       font-weight: 600;
+      color: #334155;
+      margin-bottom: 5px;
+    }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 0.9rem;
+      background: #ffffff;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+    }
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .form-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
     }
 
-    /* Printable Header (Visible only on print) */
-    .print-header { display: none; }
+    /* Modal */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(2px);
+      z-index: 999;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .modal-box {
+      background: #ffffff;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 640px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 0;
+    }
+    .modal-close {
+      background: transparent;
+      border: none;
+      font-size: 1.4rem;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px;
+    }
 
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0f172a;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: none;
+      z-index: 1000;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
+    }
+
+    /* Print Formatting */
     @media print {
       body { background: white; color: black; }
+      .topbar, .tabs-bar, .filter-bar, button, .top-actions, .kpi-grid { display: none !important; }
+      .panel { border: none; box-shadow: none; padding: 0; margin: 0; }
       .container { max-width: 100%; margin: 0; padding: 0; }
-      .topbar, .filter-grid, .inline-form, #picManagerSection, .tab-nav, .actions, .summary-grid {
-        display: none !important;
-      }
-      .card-section {
-        border: none;
-        padding: 0;
-        box-shadow: none;
-      }
-      .print-header {
-        display: block;
-        margin-bottom: 20px;
-        border-bottom: 2px solid #333;
-        padding-bottom: 10px;
-      }
-      .table-responsive { border: none; }
-      th, td { border: 1px solid #ccc !important; padding: 8px !important; }
+      th, td { border: 1px solid #ccc !important; padding: 6px !important; }
     }
   </style>
 </head>
 <body>
+
   <div class="container">
     
     <!-- Topbar -->
     <div class="topbar">
-      <div>
-        <h1>Cleaner Operations & Attendance Dashboard</h1>
-        <div style="margin-top: 6px; display: flex; align-items: center; gap: 12px;">
-          <span class="live-indicator"><span class="dot"></span> Live Syncing</span>
-          <span id="lastUpdated" style="font-size: 0.85rem; color: #64748b;">Loading...</span>
+      <div class="brand">
+        <div class="brand-icon">🏢</div>
+        <div>
+          <h1>Operations Command Center & Payroll Engine</h1>
+          <div class="brand-sub">Malaysian Cleaning & Facility Management | OPS Executive & Accounts Portal</div>
         </div>
       </div>
-      <div class="actions">
-        <button type="button" class="btn-secondary" id="refreshBtn">🔄 Refresh Now</button>
-        <button type="button" class="btn-success" id="printBtn">🖨️ Export PDF / Print Sheet</button>
+      <div class="top-actions">
+        <span style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; background:#dcfce7; color:#166534; padding:5px 12px; border-radius:999px; font-weight:700;">
+          <span style="width:8px; height:8px; border-radius:50%; background:#16a34a; display:inline-block;"></span>
+          1-Tap WhatsApp & GPS Sync Live
+        </span>
+        <button type="button" class="btn-secondary" id="refreshBtn">🔄 Refresh Data</button>
       </div>
     </div>
 
-    <!-- Toast Notice -->
+    <!-- Toast Notification -->
     <div id="toast"></div>
 
-    <!-- Summary Metrics -->
-    <div class="summary-grid" id="summaryContainer">
-      <div class="summary-card"><div class="label">Sites</div><div class="val" id="metricSites">0</div></div>
-      <div class="summary-card"><div class="label">Total Swipes</div><div class="val" id="metricSwipes">0</div></div>
-      <div class="summary-card"><div class="label">Approved</div><div class="val" id="metricApproved" style="color:#16a34a;">0</div></div>
-      <div class="summary-card"><div class="label">Pending PIC</div><div class="val" id="metricPending" style="color:#d97706;">0</div></div>
-      <div class="summary-card"><div class="label">Rejected</div><div class="val" id="metricRejected" style="color:#dc2626;">0</div></div>
+    <!-- KPI Summary Row -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Active Sites <span>🏢</span></div>
+        <div class="kpi-val" id="kpiSites">0</div>
+        <div class="kpi-sub">Across Malaysia</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Total Workers <span>👥</span></div>
+        <div class="kpi-val" id="kpiWorkers">0</div>
+        <div class="kpi-sub">Cleaners, General & Landscapers</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Present Today <span>🟢</span></div>
+        <div class="kpi-val" id="kpiPresent" style="color:#16a34a;">0</div>
+        <div class="kpi-sub">On-duty verified</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Absent Today <span>🔴</span></div>
+        <div class="kpi-val" id="kpiAbsent" style="color:#dc2626;">0</div>
+        <div class="kpi-sub">Flagged for deduction</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Pending PIC Approvals <span>⏳</span></div>
+        <div class="kpi-val" id="kpiPending" style="color:#d97706;">0</div>
+        <div class="kpi-sub">Mobile WhatsApp clock-ins</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Month Net Payroll <span>💰</span></div>
+        <div class="kpi-val" id="kpiPayroll" style="color:#1e3a8a; font-size:1.5rem;">RM 0.00</div>
+        <div class="kpi-sub" id="kpiPayrollSub">Auto-calculated net</div>
+      </div>
     </div>
 
-    <!-- SECTION 1: PIC CONTACT MANAGER (Add / Edit / Replace Resigned PIC) -->
-    <div class="card-section" id="picManagerSection">
-      <div class="section-title">
-        <span>👤</span> PIC Contact Manager (Site WhatsApp Routing)
-      </div>
-      <p class="section-desc">
-        Configure the Person In Charge (PIC) for each site. WhatsApp check-in and check-out alerts are routed here.
-        If a PIC resigns, simply click <strong>Edit / Replace</strong> to update their name and WhatsApp number.
-      </p>
+    <!-- Navigation Tabs -->
+    <div class="tabs-bar">
+      <button type="button" class="tab-btn active" data-tab="tab-sites">🏢 Site Management</button>
+      <button type="button" class="tab-btn" data-tab="tab-workers">👥 Worker Directory & Rates</button>
+      <button type="button" class="tab-btn" data-tab="tab-attendance">📋 Daily Attendance Sheet</button>
+      <button type="button" class="tab-btn" data-tab="tab-payroll">💰 Salary Engine & Accounts Report</button>
+      <button type="button" class="tab-btn" data-tab="tab-live">📱 Live Mobile Clock-In & PIC Feed</button>
+    </div>
 
-      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 0.88rem; color: #166534;">
-        <strong>✅ 1-Tap Direct WhatsApp Routing Active:</strong><br/>
-        Attendance alerts and approval links are delivered directly from the cleaner's phone to the assigned PIC's WhatsApp with zero delays.
-      </div>
-
-      <!-- Add/Edit Form -->
-      <form id="picForm">
-        <input type="hidden" id="picId" />
-        <div class="inline-form" style="align-items: flex-end;">
+    <!-- ========================================================================= -->
+    <!-- MODULE 1: SITE MANAGEMENT -->
+    <!-- ========================================================================= -->
+    <div id="tab-sites" class="tab-content">
+      <div class="panel">
+        <div class="panel-header">
           <div>
-            <label for="picSiteSelect">Site</label>
-            <select id="picSiteSelect" required>
-              <option value="">Select site</option>
+            <h2 class="panel-title"><span>🏢</span> Client Sites & Work Pattern Setup</h2>
+            <p class="panel-desc">Configure site location, PIC contact details, working hours, unpaid break duration, and allowed worker types.</p>
+          </div>
+          <button type="button" class="btn-success" id="openAddSiteBtn">➕ Create New Site</button>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Site Name</th>
+                <th>PIC Details (WhatsApp & Email)</th>
+                <th>Working Hours & Break</th>
+                <th>Work Days Pattern</th>
+                <th>Workers Allowed</th>
+                <th>Opening Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="sitesTableBody">
+              <tr><td colspan="7" style="text-align:center; padding:20px; color:#64748b;">Loading sites...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODULE 2: WORKER TYPES AND SALARY TYPES -->
+    <!-- ========================================================================= -->
+    <div id="tab-workers" class="tab-content" style="display:none;">
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title"><span>👥</span> Worker Directory & Salary Configuration</h2>
+            <p class="panel-desc">
+              Manage Cleaners (Monthly Salary), General Workers (Daily Salary), and Landscapers (Monthly or Daily).
+            </p>
+          </div>
+          <button type="button" class="btn-success" id="openAddWorkerBtn">➕ Add Worker</button>
+        </div>
+
+        <div class="filter-bar">
+          <div style="flex:1; min-width:200px;">
+            <label for="workerSiteFilter">Filter by Site</label>
+            <select id="workerSiteFilter"><option value="">All Sites</option></select>
+          </div>
+          <div style="flex:1; min-width:180px;">
+            <label for="workerTypeFilter">Worker Category</label>
+            <select id="workerTypeFilter">
+              <option value="">All Categories</option>
+              <option value="Cleaner">Cleaner (Monthly Salary)</option>
+              <option value="General Worker">General Worker (Daily Salary)</option>
+              <option value="Landscaper">Landscaper</option>
             </select>
           </div>
-          <div>
-            <label for="picName">PIC Full Name</label>
-            <input id="picName" type="text" placeholder="e.g. Shiva / Ahmad" required autocomplete="off" />
-          </div>
-          <div>
-            <label for="picNumber">WhatsApp Phone Number</label>
-            <input id="picNumber" type="tel" placeholder="e.g. 60175314868 or 0175314868" required autocomplete="off" />
-          </div>
-          <div style="display: flex; gap: 8px;">
-            <button type="submit" id="picSubmitBtn" class="btn-success">➕ Add PIC</button>
-            <button type="button" id="cancelPicEdit" class="btn-ghost" style="display: none;">Cancel</button>
+          <div style="flex:1; min-width:200px;">
+            <label for="workerSearchInput">Search Worker</label>
+            <input type="text" id="workerSearchInput" placeholder="Name or Employee Code..." />
           </div>
         </div>
-      </form>
 
-      <!-- PIC Table -->
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Site Name</th>
-              <th>PIC Name</th>
-              <th>WhatsApp Number</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="picTableBody">
-            <tr><td colspan="5" style="color:#64748b; text-align:center; padding:16px;">Loading PIC directory...</td></tr>
-          </tbody>
-        </table>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Worker Name</th>
+                <th>Employee Code</th>
+                <th>Site Assigned</th>
+                <th>Worker Category</th>
+                <th>Salary Structure</th>
+                <th>Base Salary Rate</th>
+                <th>Phone</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="workersTableBody">
+              <tr><td colspan="8" style="text-align:center; padding:20px; color:#64748b;">Loading workers...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- SECTION 2: ATTENDANCE SHEET & TIME IN / TIME OUT RECORDS -->
-    <div class="card-section">
-      <!-- Printable Header for PDF export -->
-      <div class="print-header">
-        <h2 style="margin:0;">Cleaner Daily Attendance Sheet</h2>
-        <div id="printSheetSub" style="color:#555; margin-top:4px;"></div>
-      </div>
-
-      <div class="section-title">
-        <span>📋</span> Site Attendance Sheet & Cleaner Records
-      </div>
-      <p class="section-desc">
-        View cleaner Time In & Time Out logs, GPS verification, approval status, and PIC remarks.
-      </p>
-
-      <!-- Filters Form -->
-      <form id="filterForm" style="margin-bottom: 16px;">
-        <div class="filter-grid" style="align-items: flex-end;">
+    <!-- ========================================================================= -->
+    <!-- MODULE 3: ATTENDANCE SYSTEM & DAILY SHEET -->
+    <!-- ========================================================================= -->
+    <div id="tab-attendance" class="tab-content" style="display:none;">
+      <div class="panel">
+        <div class="panel-header">
           <div>
-            <label for="siteFilter">Site Filter</label>
-            <select id="siteFilter">
-              <option value="">All Sites</option>
+            <h2 class="panel-title"><span>📋</span> Site Attendance Sheet & Daily Updates</h2>
+            <p class="panel-desc">
+              Update worker attendance daily (Present, Absent, Half Day, Leave, OT). Automatically generates the monthly attendance sheet.
+            </p>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-accent" id="openUpdateAttBtn">✍️ Update Worker Attendance</button>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <div style="flex:2; min-width:220px;">
+            <label for="attSiteSelect">Select Site (Required)</label>
+            <select id="attSiteSelect"></select>
+          </div>
+          <div style="flex:1; min-width:140px;">
+            <label for="attYearSelect">Year</label>
+            <select id="attYearSelect">
+              <option value="2026">2026</option>
+              <option value="2025">2025</option>
             </select>
           </div>
-          <div>
-            <label for="dateFilter">Date</label>
-            <input id="dateFilter" type="date" />
+          <div style="flex:1; min-width:160px;">
+            <label for="attMonthSelect">Month</label>
+            <select id="attMonthSelect">
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
           </div>
+          <div style="align-self: flex-end;">
+            <button type="button" class="btn" id="loadAttSheetBtn">Load Sheet</button>
+          </div>
+        </div>
+
+        <!-- Monthly Info Banner -->
+        <div id="attSheetBanner" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:0.88rem; color:#1e40af; display:none;">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Attendance Sheet Table -->
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Worker Name</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>In Time</th>
+                <th>Out Time</th>
+                <th>Late Hours</th>
+                <th>OT Hours</th>
+                <th>Source</th>
+                <th>Remarks</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="attSheetTableBody">
+              <tr><td colspan="11" style="text-align:center; padding:20px; color:#64748b;">Select a site to view attendance sheet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODULE 4: SALARY CALCULATION & ACCOUNTS REPORT -->
+    <!-- ========================================================================= -->
+    <div id="tab-payroll" class="tab-content" style="display:none;">
+      <div class="panel">
+        <div class="panel-header">
           <div>
-            <label for="statusFilter">Status Filter</label>
-            <select id="statusFilter">
+            <h2 class="panel-title"><span>💰</span> Salary Calculation Engine & Accounts Dispatch</h2>
+            <p class="panel-desc">
+              Strict Malaysian facility salary logic: Auto-counted working days, unpaid break deduction, late/absent deductions, and OT pay.
+            </p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-success" id="openEmailAccountsBtn">✉️ Send Report to Accounts</button>
+            <button type="button" class="btn-secondary" id="printPayrollBtn">🖨️ Export PDF / Print</button>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <div style="flex:2; min-width:220px;">
+            <label for="payrollSiteSelect">Select Site</label>
+            <select id="payrollSiteSelect"></select>
+          </div>
+          <div style="flex:1; min-width:140px;">
+            <label for="payrollYearSelect">Year</label>
+            <select id="payrollYearSelect">
+              <option value="2026">2026</option>
+              <option value="2025">2025</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width:160px;">
+            <label for="payrollMonthSelect">Month</label>
+            <select id="payrollMonthSelect">
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+          <div style="align-self: flex-end;">
+            <button type="button" class="btn" id="calculatePayrollBtn">Calculate Salary</button>
+          </div>
+        </div>
+
+        <!-- Formula Callout -->
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:0.83rem; color:#475569;">
+          <strong>🧮 Salary Rules Active:</strong> 
+          Per Day = Base Salary ÷ Auto-Counted Working Days | Net Hours = Gross Hours − Break (Unpaid) | Per Hour = Per Day ÷ Net Hours | Late: Deduct Per Hour × Late Hours | Absent: Deduct 1× Per Day | Half Day: Deduct 0.5× Per Day | OT: 1.5× Hourly Rate.
+        </div>
+
+        <!-- Payroll Breakdown Table -->
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Worker Name</th>
+                <th>Type & Mode</th>
+                <th>Base Salary</th>
+                <th>Working Days</th>
+                <th>Net Hours/Day</th>
+                <th>Per Day Rate</th>
+                <th>Per Hour Rate</th>
+                <th>Attendance Summary</th>
+                <th>Deductions (Absent/Half/Late)</th>
+                <th>OT Pay</th>
+                <th style="background:#f1f5f9; font-weight:800;">Net Payable (RM)</th>
+              </tr>
+            </thead>
+            <tbody id="payrollTableBody">
+              <tr><td colspan="11" style="text-align:center; padding:20px; color:#64748b;">Select site and click Calculate Salary.</td></tr>
+            </tbody>
+            <tfoot id="payrollTableFoot" style="font-weight:800; background:#f8fafc;"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODULE 5: LIVE MOBILE CLOCK-IN & PIC PHONE FEED -->
+    <!-- ========================================================================= -->
+    <div id="tab-live" class="tab-content" style="display:none;">
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title"><span>📱</span> Live Cleaner GPS Clock-In & PIC Phone Approvals</h2>
+            <p class="panel-desc">Real-time mobile selfies, GPS geofence checks, and 1-tap WhatsApp approvals sent to PIC phones.</p>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <div style="flex:1; min-width:180px;">
+            <label for="liveSiteFilter">Filter Site</label>
+            <select id="liveSiteFilter"><option value="">All Sites</option></select>
+          </div>
+          <div style="flex:1; min-width:150px;">
+            <label for="liveStatusFilter">Status</label>
+            <select id="liveStatusFilter">
               <option value="">All Statuses</option>
+              <option value="pending">Pending PIC</option>
               <option value="approved">Approved</option>
-              <option value="pending">Pending</option>
               <option value="rejected">Rejected</option>
             </select>
           </div>
-          <div>
-            <label for="searchFilter">Search Cleaner</label>
-            <input id="searchFilter" type="text" placeholder="Name or Employee Code..." />
-          </div>
-          <div>
-            <button type="submit" style="width: 100%;">Apply Filters</button>
-          </div>
         </div>
-      </form>
 
-      <!-- Tabs Navigation -->
-      <div class="tab-nav">
-        <button type="button" class="tab-btn active" id="tabSummaryBtn">📋 Cleaner Daily Sheet (In & Out)</button>
-        <button type="button" class="tab-btn" id="tabLogBtn">⏱️ Detailed Activity Log (All Swipes)</button>
-      </div>
-
-      <!-- VIEW 1: Daily Paired In/Out Summary Sheet -->
-      <div id="summaryView">
-        <div class="table-responsive">
+        <div class="table-container">
           <table>
             <thead>
               <tr>
-                <th>Cleaner</th>
+                <th>Clock Time</th>
+                <th>Worker Name</th>
                 <th>Code</th>
                 <th>Site</th>
-                <th>Time In 🟢</th>
-                <th>Time Out 🔴</th>
-                <th>Shift Duration</th>
-                <th>Day Status</th>
-                <th>PIC Approver</th>
-                <th>Remarks</th>
-              </tr>
-            </thead>
-            <tbody id="summaryTableBody">
-              <tr><td colspan="9" style="text-align:center; padding:20px; color:#64748b;">Loading attendance records...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- VIEW 2: Raw Swipe Log -->
-      <div id="logView" style="display: none;">
-        <div class="table-responsive">
-          <table>
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Cleaner</th>
-                <th>Code</th>
                 <th>Action</th>
-                <th>Site</th>
-                <th>Distance</th>
+                <th>GPS Distance</th>
                 <th>Status</th>
-                <th>PIC</th>
-                <th>Remark</th>
+                <th>Assigned PIC</th>
+                <th>PIC Actions</th>
               </tr>
             </thead>
-            <tbody id="logTableBody">
-              <tr><td colspan="9" style="text-align:center; padding:20px; color:#64748b;">Loading swipe log...</td></tr>
+            <tbody id="liveTableBody">
+              <tr><td colspan="9" style="text-align:center; padding:20px; color:#64748b;">Loading live swipes...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
-
     </div>
 
   </div>
 
-  <script>
-    // State
-    let currentPics = [];
-    let currentRows = [];
-    let currentSites = [];
-    let activeTab = 'summary'; // 'summary' or 'log'
+  <!-- ========================================================================= -->
+  <!-- MODALS -->
+  <!-- ========================================================================= -->
 
-    // DOM Elements
-    const siteFilter = document.getElementById('siteFilter');
-    const dateFilter = document.getElementById('dateFilter');
-    const statusFilter = document.getElementById('statusFilter');
-    const searchFilter = document.getElementById('searchFilter');
-    const filterForm = document.getElementById('filterForm');
-    const lastUpdated = document.getElementById('lastUpdated');
-    const toast = document.getElementById('toast');
-
-    // PIC Form Elements
-    const picForm = document.getElementById('picForm');
-    const picId = document.getElementById('picId');
-    const picSiteSelect = document.getElementById('picSiteSelect');
-    const picName = document.getElementById('picName');
-    const picNumber = document.getElementById('picNumber');
-    const picSubmitBtn = document.getElementById('picSubmitBtn');
-    const cancelPicEdit = document.getElementById('cancelPicEdit');
-    const picTableBody = document.getElementById('picTableBody');
-
-    // Attendance Table Bodies
-    const summaryTableBody = document.getElementById('summaryTableBody');
-    const logTableBody = document.getElementById('logTableBody');
-    const tabSummaryBtn = document.getElementById('tabSummaryBtn');
-    const tabLogBtn = document.getElementById('tabLogBtn');
-    const summaryView = document.getElementById('summaryView');
-    const logView = document.getElementById('logView');
-
-    function showToast(msg) {
-      toast.textContent = msg;
-      toast.style.display = 'block';
-      setTimeout(() => { toast.style.display = 'none'; }, 4000);
-    }
-
-    function formatTime(isoStr) {
-      if (!isoStr) return '—';
-      return new Date(isoStr).toLocaleTimeString('en-MY', {
-        timeZone: 'Asia/Kuala_Lumpur',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    }
-
-    function formatDateTime(isoStr) {
-      if (!isoStr) return '—';
-      return new Date(isoStr).toLocaleString('en-MY', {
-        timeZone: 'Asia/Kuala_Lumpur',
-        dateStyle: 'short',
-        timeStyle: 'short'
-      });
-    }
-
-    function normalizeWhatsAppNumber(raw) {
-      if (!raw) return '';
-      let digits = String(raw).replace(/\D/g, '');
-      if (digits.startsWith('0')) digits = '60' + digits.slice(1);
-      return digits;
-    }
-
-    // Tab switching
-    tabSummaryBtn.addEventListener('click', () => {
-      activeTab = 'summary';
-      tabSummaryBtn.classList.add('active');
-      tabLogBtn.classList.remove('active');
-      summaryView.style.display = 'block';
-      logView.style.display = 'none';
-    });
-
-    tabLogBtn.addEventListener('click', () => {
-      activeTab = 'log';
-      tabLogBtn.classList.add('active');
-      tabSummaryBtn.classList.remove('active');
-      logView.style.display = 'block';
-      summaryView.style.display = 'none';
-    });
-
-    // Load Sites for Dropdowns
-    async function loadSites() {
-      try {
-        const res = await fetch('/api/operations/sites');
-        currentSites = await res.json();
+  <!-- Modal: Create / Edit Site -->
+  <div class="modal-backdrop" id="siteModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="siteModalTitle">🏢 Create New Site</h3>
+        <button type="button" class="modal-close" onclick="closeModal('siteModal')">&times;</button>
+      </div>
+      <form id="siteForm">
+        <input type="hidden" id="formSiteId" />
         
-        const siteOpts = currentSites.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-        siteFilter.innerHTML = '<option value="">All Sites</option>' + siteOpts;
-        picSiteSelect.innerHTML = '<option value="">Select site</option>' + siteOpts;
-      } catch (e) {
-        console.error('Failed to load sites', e);
+        <div class="form-group">
+          <label for="formSiteName">Site Name *</label>
+          <input type="text" id="formSiteName" placeholder="e.g. Sunway Grid / Pavilion Residences" required />
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="formPicName">PIC Full Name *</label>
+            <input type="text" id="formPicName" placeholder="e.g. Shiva" required />
+          </div>
+          <div class="form-group">
+            <label for="formPicPhone">PIC Phone Number (WhatsApp) *</label>
+            <input type="tel" id="formPicPhone" placeholder="e.g. 60177489628 or 0177489628" required />
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="formPicEmail">PIC Email Address *</label>
+            <input type="email" id="formPicEmail" placeholder="pic@facility.com.my" required />
+          </div>
+          <div class="form-group">
+            <label for="formOpeningDate">Site Opening Date *</label>
+            <input type="date" id="formOpeningDate" required />
+          </div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="formLatitude">Latitude *</label>
+            <input type="number" step="any" id="formLatitude" placeholder="1.4312" required />
+          </div>
+          <div class="form-group">
+            <label for="formLongitude">Longitude *</label>
+            <input type="number" step="any" id="formLongitude" placeholder="103.6276" required />
+          </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <button type="button" class="btn-secondary" style="width:100%;" id="btnGetLocation">📍 Use My GPS</button>
+          </div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="formPattern">Working Days Pattern *</label>
+            <select id="formPattern" required>
+              <option value="Mon-Fri">Mon-Fri (Standard)</option>
+              <option value="Mon-Sat">Mon-Sat (6 Days)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="formTimeStart">Working Time Start *</label>
+            <input type="time" id="formTimeStart" value="09:00" required />
+          </div>
+          <div class="form-group">
+            <label for="formTimeEnd">Working Time End *</label>
+            <input type="time" id="formTimeEnd" value="17:00" required />
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="formBreakMin">Break Time (Minutes, Unpaid) *</label>
+            <input type="number" id="formBreakMin" value="60" min="0" step="5" placeholder="e.g. 60 or 30" required />
+            <span style="font-size:0.75rem; color:#64748b;">This break is excluded from payable salary hours.</span>
+          </div>
+          <div class="form-group">
+            <label for="formLandscaperSalaryType">Landscaper Salary Basis</label>
+            <select id="formLandscaperSalaryType">
+              <option value="monthly">Monthly Salary</option>
+              <option value="daily">Daily Salary</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Allowed Worker Types for this Site</label>
+          <div style="display:flex; gap:16px; margin-top:6px; flex-wrap:wrap;">
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:normal;">
+              <input type="checkbox" id="chkCleaner" checked /> Cleaner (Monthly)
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:normal;">
+              <input type="checkbox" id="chkGeneral" checked /> General Worker (Daily)
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:normal;">
+              <input type="checkbox" id="chkLandscaper" checked /> Landscaper
+            </label>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+          <button type="button" class="btn-secondary" onclick="closeModal('siteModal')">Cancel</button>
+          <button type="submit" class="btn-success">💾 Save Site</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Add / Edit Worker -->
+  <div class="modal-backdrop" id="workerModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="workerModalTitle">👥 Add Worker</h3>
+        <button type="button" class="modal-close" onclick="closeModal('workerModal')">&times;</button>
+      </div>
+      <form id="workerForm">
+        <input type="hidden" id="formWorkerId" />
+
+        <div class="form-group">
+          <label for="formWorkerSite">Assigned Site *</label>
+          <select id="formWorkerSite" required></select>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="formWorkerName">Full Name *</label>
+            <input type="text" id="formWorkerName" placeholder="e.g. Kiran / Ahmad" required />
+          </div>
+          <div class="form-group">
+            <label for="formWorkerCode">Employee Code *</label>
+            <input type="text" id="formWorkerCode" placeholder="e.g. CL01, GW02, LS01" required />
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="formWorkerType">Worker Category *</label>
+            <select id="formWorkerType" required>
+              <option value="Cleaner">Cleaner (Monthly Salary)</option>
+              <option value="General Worker">General Worker (Daily Salary)</option>
+              <option value="Landscaper">Landscaper</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="formWorkerSalaryType">Salary Type (Auto-enforced)</label>
+            <select id="formWorkerSalaryType">
+              <option value="monthly">Monthly Salary</option>
+              <option value="daily">Daily Salary</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="formWorkerBaseSalary" id="lblBaseSalary">Total Monthly Salary (RM) *</label>
+            <input type="number" step="0.01" id="formWorkerBaseSalary" placeholder="e.g. 3500.00" required />
+          </div>
+          <div class="form-group">
+            <label for="formWorkerPhone">Phone Number</label>
+            <input type="tel" id="formWorkerPhone" placeholder="e.g. 0123456789" />
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+          <button type="button" class="btn-secondary" onclick="closeModal('workerModal')">Cancel</button>
+          <button type="submit" class="btn-success">💾 Save Worker</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Update Daily Attendance -->
+  <div class="modal-backdrop" id="attendanceModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">✍️ Update Worker Attendance</h3>
+        <button type="button" class="modal-close" onclick="closeModal('attendanceModal')">&times;</button>
+      </div>
+      <form id="attendanceForm">
+        <div class="form-group">
+          <label for="modalAttSite">Site *</label>
+          <select id="modalAttSite" required></select>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="modalAttWorker">Worker *</label>
+            <select id="modalAttWorker" required></select>
+          </div>
+          <div class="form-group">
+            <label for="modalAttDate">Date *</label>
+            <input type="date" id="modalAttDate" required />
+          </div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="modalAttStatus">Status *</label>
+            <select id="modalAttStatus" required>
+              <option value="Present">Present 🟢</option>
+              <option value="Absent">Absent 🔴</option>
+              <option value="Half Day">Half Day 🟡</option>
+              <option value="Leave">Leave ⚪</option>
+              <option value="OT">OT (Overtime) 🟣</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="modalAttIn">In Time</label>
+            <input type="time" id="modalAttIn" value="09:00" />
+          </div>
+          <div class="form-group">
+            <label for="modalAttOut">Out Time</label>
+            <input type="time" id="modalAttOut" value="17:00" />
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="modalAttLate">Late Hours (optional override)</label>
+            <input type="number" step="0.25" min="0" id="modalAttLate" placeholder="Auto-calculated" />
+          </div>
+          <div class="form-group">
+            <label for="modalAttOt">OT Hours (optional override)</label>
+            <input type="number" step="0.25" min="0" id="modalAttOt" placeholder="Auto-calculated" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="modalAttRemarks">Remarks</label>
+          <input type="text" id="modalAttRemarks" placeholder="e.g. Regular shift / Doctor MC / Verified by PIC" />
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+          <button type="button" class="btn-secondary" onclick="closeModal('attendanceModal')">Cancel</button>
+          <button type="submit" class="btn-success">💾 Save Attendance</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Send Email to Accounts -->
+  <div class="modal-backdrop" id="emailModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">✉️ Dispatch Payroll Report to Accounts</h3>
+        <button type="button" class="modal-close" onclick="closeModal('emailModal')">&times;</button>
+      </div>
+      <form id="emailForm">
+        <div class="form-group">
+          <label for="emailRecipient">Accounts Department Email *</label>
+          <input type="email" id="emailRecipient" placeholder="accounts@facility.com.my" value="accounts@facility.com.my" required />
+        </div>
+        <div class="form-group">
+          <label for="emailSubject">Subject</label>
+          <input type="text" id="emailSubject" readonly />
+        </div>
+        <div class="form-group">
+          <label for="emailNotes">Additional Notes for Accounts</label>
+          <textarea id="emailNotes" rows="3" placeholder="e.g. Certified by OPS Executive. Ready for payment release."></textarea>
+        </div>
+        <div id="emailPreviewBox" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-size:0.85rem; margin-bottom:16px;"></div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn-secondary" onclick="closeModal('emailModal')">Cancel</button>
+          <button type="submit" class="btn-success" id="btnSubmitEmail">🚀 Send Report</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- JAVASCRIPT LOGIC -->
+  <!-- ========================================================================= -->
+  <script>
+    // State Store
+    let sites = [];
+    let workers = [];
+    let currentPayroll = null;
+    let currentAttSheet = null;
+
+    // Toast Notification
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 4000);
+    }
+
+    // Modal Helpers
+    function openModal(id) {
+      document.getElementById(id).style.display = 'flex';
+    }
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    // Tab Navigation
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        btn.classList.add('active');
+        const target = btn.getAttribute('data-tab');
+        document.getElementById(target).style.display = 'block';
+
+        if (target === 'tab-live') loadLiveFeed();
+      });
+    });
+
+    // Worker type change handles salary type auto-selection
+    document.getElementById('formWorkerType').addEventListener('change', (e) => {
+      const type = e.target.value;
+      const salaryTypeSelect = document.getElementById('formWorkerSalaryType');
+      const baseLabel = document.getElementById('lblBaseSalary');
+      const baseInput = document.getElementById('formWorkerBaseSalary');
+
+      if (type === 'Cleaner') {
+        salaryTypeSelect.value = 'monthly';
+        salaryTypeSelect.disabled = true;
+        baseLabel.textContent = 'Total Monthly Salary (RM) *';
+        baseInput.placeholder = 'e.g. 3500.00';
+      } else if (type === 'General Worker') {
+        salaryTypeSelect.value = 'daily';
+        salaryTypeSelect.disabled = true;
+        baseLabel.textContent = 'Daily Salary Rate (RM/day) *';
+        baseInput.placeholder = 'e.g. 80.00';
+      } else if (type === 'Landscaper') {
+        salaryTypeSelect.disabled = false;
+        updateLandscaperLabel();
+      }
+    });
+
+    document.getElementById('formWorkerSalaryType').addEventListener('change', () => {
+      if (document.getElementById('formWorkerType').value === 'Landscaper') {
+        updateLandscaperLabel();
+      }
+    });
+
+    function updateLandscaperLabel() {
+      const isDaily = document.getElementById('formWorkerSalaryType').value === 'daily';
+      const baseLabel = document.getElementById('lblBaseSalary');
+      const baseInput = document.getElementById('formWorkerBaseSalary');
+      if (isDaily) {
+        baseLabel.textContent = 'Daily Salary Rate (RM/day) *';
+        baseInput.placeholder = 'e.g. 85.00';
+      } else {
+        baseLabel.textContent = 'Total Monthly Salary (RM) *';
+        baseInput.placeholder = 'e.g. 3200.00';
       }
     }
 
-    // Load PICs
-    async function loadPics() {
-      try {
-        const res = await fetch('/api/operations/pics');
-        currentPics = await res.json();
+    // Geolocation helper
+    document.getElementById('btnGetLocation').addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        alert('Geolocation not supported by this browser.');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          document.getElementById('formLatitude').value = pos.coords.latitude.toFixed(6);
+          document.getElementById('formLongitude').value = pos.coords.longitude.toFixed(6);
+          showToast('📍 Captured current GPS coordinates!');
+        },
+        (err) => {
+          alert('GPS Error: ' + err.message);
+        },
+        { enableHighAccuracy: true }
+      );
+    });
 
-        if (!currentPics.length) {
-          picTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b; padding:18px;">No PICs configured yet. Add your first PIC above!</td></tr>';
+    // ==========================================
+    // MODULE 1: SITES
+    // ==========================================
+    async function loadSites() {
+      try {
+        const res = await fetch('/api/operations/sites');
+        sites = await res.json();
+
+        // Populate dropdowns across views
+        const opts = sites.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        document.getElementById('attSiteSelect').innerHTML = opts;
+        document.getElementById('payrollSiteSelect').innerHTML = opts;
+        document.getElementById('workerSiteFilter').innerHTML = '<option value="">All Sites</option>' + opts;
+        document.getElementById('liveSiteFilter').innerHTML = '<option value="">All Sites</option>' + opts;
+        document.getElementById('formWorkerSite').innerHTML = opts;
+        document.getElementById('modalAttSite').innerHTML = opts;
+
+        // Render Sites Table
+        const tbody = document.getElementById('sitesTableBody');
+        if (!sites.length) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#64748b;">No sites configured. Click "Create New Site" above!</td></tr>';
           return;
         }
 
-        picTableBody.innerHTML = currentPics.map(pic => {
-          const testMsg = `🔔 *Attendance System Test*: Verification routing is active for ${pic.name} at ${pic.site_name || 'Site'}! ✅`;
-          const waLink = `https://wa.me/${pic.whatsapp_number}?text=${encodeURIComponent(testMsg)}`;
+        tbody.innerHTML = sites.map(s => {
+          const types = Array.isArray(s.allowed_worker_types) ? s.allowed_worker_types.join(', ') : 'Cleaner';
+          const waLink = `https://wa.me/${s.pic_phone}?text=${encodeURIComponent('Hello ' + (s.pic_name || 'PIC') + ', testing WhatsApp link from Operations.')}`;
           return `
             <tr>
-              <td><strong>${pic.site_name || '—'}</strong></td>
-              <td>${pic.name}</td>
               <td>
-                <a href="${waLink}" target="_blank" style="color:#0284c7; text-decoration:none; font-weight:600;">
-                  📱 ${pic.whatsapp_number}
-                </a>
+                <strong>${s.name}</strong><br/>
+                <span style="font-size:0.78rem; color:#64748b;">GPS: ${s.latitude?.toFixed(4)}, ${s.longitude?.toFixed(4)} (±${s.radius_meters || 150}m)</span>
               </td>
-              <td><span class="badge badge-approved">Active Routing</span></td>
+              <td>
+                <strong>${s.pic_name || '—'}</strong><br/>
+                <a href="${waLink}" target="_blank" style="color:#0284c7; text-decoration:none; font-weight:600; font-size:0.83rem;">📱 +${s.pic_phone || '—'}</a><br/>
+                <span style="font-size:0.78rem; color:#64748b;">✉️ ${s.pic_email || '—'}</span>
+              </td>
+              <td>
+                <span style="font-weight:600;">${s.working_time_start} - ${s.working_time_end}</span><br/>
+                <span style="font-size:0.8rem; color:#d97706; font-weight:600;">☕ ${s.break_time_minutes || 60}m Unpaid Break</span>
+              </td>
+              <td><span class="badge ${s.working_days_pattern === 'Mon-Sat' ? 'badge-halfday' : 'badge-monthly'}">${s.working_days_pattern || 'Mon-Fri'}</span></td>
+              <td><span style="font-size:0.82rem; color:#334155;">${types}</span></td>
+              <td>${s.opening_date ? s.opening_date.substring(0,10) : '—'}</td>
               <td>
                 <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                  <a href="${waLink}" target="_blank" class="btn-secondary" style="padding:5px 10px; font-size:0.8rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-weight:600;" title="Open WhatsApp chat with this PIC">
-                    💬 Chat PIC
-                  </a>
-                  <button type="button" class="btn-secondary" style="padding:5px 10px; font-size:0.8rem;" onclick="handleTestAlert('${pic.whatsapp_number}', '${pic.name}')" title="Test direct WhatsApp link to this PIC">
-                    ⚡ Test Link
-                  </button>
-                  <button type="button" class="btn-secondary" style="padding:5px 10px; font-size:0.8rem;" onclick="handleEditPic(${pic.id})">
-                    ✏️ Edit / Replace
-                  </button>
-                  <button type="button" class="btn-danger" style="padding:5px 10px; font-size:0.8rem;" onclick="handleDeletePic(${pic.id}, '${pic.name}', '${pic.site_name}')">
-                    🗑️ Delete
-                  </button>
+                  <button type="button" class="btn-secondary btn-sm" onclick="editSite(${s.id})">✏️ Edit</button>
+                  <a href="${waLink}" target="_blank" class="btn-secondary btn-sm" title="Chat with PIC on WhatsApp">💬 Chat PIC</a>
+                  <button type="button" class="btn-danger btn-sm" onclick="deleteSite(${s.id}, '${s.name}')">🗑️</button>
                 </div>
               </td>
             </tr>
           `;
         }).join('');
-      } catch (e) {
-        picTableBody.innerHTML = '<tr><td colspan="5" style="color:#dc2626; text-align:center;">Failed to load PIC directory.</td></tr>';
+
+        document.getElementById('kpiSites').textContent = sites.length;
+      } catch (err) {
+        console.error('Failed to load sites', err);
       }
     }
 
-    window.handleTestAlert = async function(number, name) {
-      showToast(`Generating test WhatsApp link for ${name || number}...`);
-      try {
-        const res = await fetch('/api/operations/test-whatsapp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ number })
-        });
-        const data = await res.json();
-        if (data.share_url) {
-          window.open(data.share_url, '_blank');
-          showToast(`✅ Opened direct WhatsApp test for +${data.target || number}`);
-        } else {
-          alert('Failed to generate test link.');
-        }
-      } catch (e) {
-        alert('Error generating test link: ' + e.message);
-      }
-    };
-
-    window.handleEditPic = function(id) {
-      const pic = currentPics.find(p => p.id === id);
-      if (!pic) return;
-
-      picId.value = pic.id;
-      picSiteSelect.value = pic.site_id;
-      picName.value = pic.name;
-      picNumber.value = pic.whatsapp_number;
-
-      picSubmitBtn.textContent = '💾 Update / Replace PIC';
-      cancelPicEdit.style.display = 'inline-block';
-      picForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      picName.focus();
-    };
-
-    window.handleDeletePic = async function(id, name, siteName) {
-      if (!confirm(`Are you sure you want to remove PIC "${name}" from ${siteName}?`)) return;
-      try {
-        const res = await fetch(`/api/operations/pics/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-          showToast(`PIC "${name}" removed. You can assign a new PIC anytime.`);
-          await loadPics();
-          await loadData();
-        } else {
-          alert('Failed to delete PIC.');
-        }
-      } catch (err) {
-        alert('Network error deleting PIC.');
-      }
-    };
-
-    cancelPicEdit.addEventListener('click', () => {
-      resetPicForm();
+    document.getElementById('openAddSiteBtn').addEventListener('click', () => {
+      document.getElementById('siteForm').reset();
+      document.getElementById('formSiteId').value = '';
+      document.getElementById('formOpeningDate').value = new Date().toISOString().substring(0, 10);
+      document.getElementById('siteModalTitle').textContent = '🏢 Create New Site';
+      openModal('siteModal');
     });
 
-    function resetPicForm() {
-      picId.value = '';
-      picName.value = '';
-      picNumber.value = '';
-      picSiteSelect.value = '';
-      picSubmitBtn.textContent = '➕ Add PIC';
-      cancelPicEdit.style.display = 'none';
-    }
+    window.editSite = function(id) {
+      const s = sites.find(x => x.id === id);
+      if (!s) return;
+      document.getElementById('formSiteId').value = s.id;
+      document.getElementById('formSiteName').value = s.name;
+      document.getElementById('formPicName').value = s.pic_name || '';
+      document.getElementById('formPicPhone').value = s.pic_phone || '';
+      document.getElementById('formPicEmail').value = s.pic_email || '';
+      document.getElementById('formOpeningDate').value = s.opening_date ? s.opening_date.substring(0, 10) : '';
+      document.getElementById('formLatitude').value = s.latitude;
+      document.getElementById('formLongitude').value = s.longitude;
+      document.getElementById('formPattern').value = s.working_days_pattern || 'Mon-Fri';
+      document.getElementById('formTimeStart').value = s.working_time_start || '09:00';
+      document.getElementById('formTimeEnd').value = s.working_time_end || '17:00';
+      document.getElementById('formBreakMin').value = s.break_time_minutes || 60;
+      document.getElementById('formLandscaperSalaryType').value = s.landscaper_salary_type || 'monthly';
 
-    // Submit Add or Update PIC
-    picForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const siteId = picSiteSelect.value;
-      const name = picName.value.trim();
-      const rawNumber = picNumber.value.trim();
-      const normalizedNumber = normalizeWhatsAppNumber(rawNumber);
+      const allowed = Array.isArray(s.allowed_worker_types) ? s.allowed_worker_types : ['Cleaner'];
+      document.getElementById('chkCleaner').checked = allowed.includes('Cleaner');
+      document.getElementById('chkGeneral').checked = allowed.includes('General Worker');
+      document.getElementById('chkLandscaper').checked = allowed.includes('Landscaper');
 
-      if (!siteId || !name || !normalizedNumber) {
-        alert('Please fill in Site, PIC Name, and WhatsApp number.');
-        return;
+      document.getElementById('siteModalTitle').textContent = '✏️ Edit Site';
+      openModal('siteModal');
+    };
+
+    window.deleteSite = async function(id, name) {
+      if (!confirm(`Are you sure you want to delete site "${name}"? This will delete all its worker records and attendance history.`)) return;
+      try {
+        const res = await fetch(`/api/operations/sites/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast(`Site "${name}" deleted.`);
+          await loadSites();
+          await loadWorkers();
+        } else {
+          alert('Failed to delete site.');
+        }
+      } catch (err) {
+        alert('Network error deleting site.');
       }
+    };
 
-      const isUpdate = !!picId.value;
-      const url = isUpdate ? `/api/operations/pics/${picId.value}` : '/api/operations/pics';
-      const method = isUpdate ? 'PUT' : 'POST';
+    document.getElementById('siteForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('formSiteId').value;
+      const allowed = [];
+      if (document.getElementById('chkCleaner').checked) allowed.push('Cleaner');
+      if (document.getElementById('chkGeneral').checked) allowed.push('General Worker');
+      if (document.getElementById('chkLandscaper').checked) allowed.push('Landscaper');
+
+      const payload = {
+        name: document.getElementById('formSiteName').value.trim(),
+        pic_name: document.getElementById('formPicName').value.trim(),
+        pic_phone: document.getElementById('formPicPhone').value.trim(),
+        pic_email: document.getElementById('formPicEmail').value.trim(),
+        opening_date: document.getElementById('formOpeningDate').value,
+        latitude: parseFloat(document.getElementById('formLatitude').value),
+        longitude: parseFloat(document.getElementById('formLongitude').value),
+        working_days_pattern: document.getElementById('formPattern').value,
+        working_time_start: document.getElementById('formTimeStart').value,
+        working_time_end: document.getElementById('formTimeEnd').value,
+        break_time_minutes: parseInt(document.getElementById('formBreakMin').value, 10),
+        landscaper_salary_type: document.getElementById('formLandscaperSalaryType').value,
+        allowed_worker_types: allowed
+      };
+
+      const url = id ? `/api/operations/sites/${id}` : '/api/operations/sites';
+      const method = id ? 'PUT' : 'POST';
 
       try {
         const res = await fetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            site_id: siteId,
-            name,
-            whatsapp_number: normalizedNumber
-          })
+          body: JSON.stringify(payload)
         });
-
         const data = await res.json();
         if (!res.ok) {
-          alert(data.error || 'Failed to save PIC.');
+          alert(data.error || 'Failed to save site.');
+          return;
+        }
+        closeModal('siteModal');
+        showToast(id ? 'Site updated successfully!' : 'New site created successfully!');
+        await loadSites();
+      } catch (err) {
+        alert('Network error saving site.');
+      }
+    });
+
+    // ==========================================
+    // MODULE 2: WORKERS
+    // ==========================================
+    async function loadWorkers() {
+      try {
+        const siteId = document.getElementById('workerSiteFilter').value;
+        const workerType = document.getElementById('workerTypeFilter').value;
+        const search = document.getElementById('workerSearchInput').value;
+
+        const params = new URLSearchParams();
+        if (siteId) params.set('site_id', siteId);
+        if (workerType) params.set('worker_type', workerType);
+        if (search) params.set('search', search);
+
+        const res = await fetch(`/api/operations/workers?${params.toString()}`);
+        workers = await res.json();
+
+        const tbody = document.getElementById('workersTableBody');
+        if (!workers.length) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#64748b;">No workers found. Click "Add Worker" to add your first worker.</td></tr>';
           return;
         }
 
-        showToast(isUpdate ? `PIC updated successfully! Future alerts will route to ${name} (${normalizedNumber}).` : `New PIC ${name} added!`);
-        resetPicForm();
-        await loadPics();
-        await loadData();
+        tbody.innerHTML = workers.map(w => {
+          const isMonthly = (w.salary_type || 'monthly') === 'monthly';
+          const rateLabel = isMonthly ? `RM ${parseFloat(w.base_salary).toFixed(2)} / month` : `RM ${parseFloat(w.base_salary).toFixed(2)} / day`;
+          return `
+            <tr>
+              <td><strong>${w.name}</strong></td>
+              <td><code>${w.employee_code}</code></td>
+              <td>${w.site_name}</td>
+              <td><span class="badge ${w.worker_type === 'Cleaner' ? 'badge-monthly' : (w.worker_type === 'General Worker' ? 'badge-daily' : 'badge-ot')}">${w.worker_type}</span></td>
+              <td><span class="badge ${isMonthly ? 'badge-monthly' : 'badge-daily'}">${isMonthly ? 'Monthly Salary' : 'Daily Salary'}</span></td>
+              <td><strong>${rateLabel}</strong></td>
+              <td>${w.phone || '—'}</td>
+              <td>
+                <div style="display:flex; gap:6px;">
+                  <button type="button" class="btn-secondary btn-sm" onclick="editWorker(${w.id})">✏️ Edit</button>
+                  <button type="button" class="btn-danger btn-sm" onclick="deleteWorker(${w.id}, '${w.name}')">🗑️</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        document.getElementById('kpiWorkers').textContent = workers.length;
+
+        // Also update modal worker dropdown
+        const workerOpts = workers.map(w => `<option value="${w.id}">${w.name} (${w.employee_code}) - ${w.site_name}</option>`).join('');
+        document.getElementById('modalAttWorker').innerHTML = workerOpts;
       } catch (err) {
-        alert('Network error saving PIC.');
+        console.error('Failed to load workers', err);
       }
+    }
+
+    document.getElementById('openAddWorkerBtn').addEventListener('click', () => {
+      document.getElementById('workerForm').reset();
+      document.getElementById('formWorkerId').value = '';
+      document.getElementById('formWorkerSalaryType').disabled = true;
+      document.getElementById('formWorkerSalaryType').value = 'monthly';
+      document.getElementById('lblBaseSalary').textContent = 'Total Monthly Salary (RM) *';
+      document.getElementById('formWorkerBaseSalary').value = '3500.00';
+      document.getElementById('workerModalTitle').textContent = '👥 Add Worker';
+      openModal('workerModal');
     });
 
-    // Render Paired In/Out Summary Table
-    function renderPairedSummary(rows) {
-      if (!rows.length) {
-        summaryTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#64748b;">No attendance records found for this filter.</td></tr>';
-        return;
-      }
+    window.editWorker = function(id) {
+      const w = workers.find(x => x.id === id);
+      if (!w) return;
+      document.getElementById('formWorkerId').value = w.id;
+      document.getElementById('formWorkerSite').value = w.site_id;
+      document.getElementById('formWorkerName').value = w.name;
+      document.getElementById('formWorkerCode').value = w.employee_code;
+      document.getElementById('formWorkerType').value = w.worker_type;
+      document.getElementById('formWorkerSalaryType').value = w.salary_type;
+      document.getElementById('formWorkerSalaryType').disabled = (w.worker_type !== 'Landscaper');
+      document.getElementById('formWorkerBaseSalary').value = w.base_salary;
+      document.getElementById('formWorkerPhone').value = w.phone || '';
 
-      // Group rows by cleaner_id and date
-      const grouped = {};
-      rows.forEach(r => {
-        const key = `${r.cleaner_id}_${r.created_at ? r.created_at.substring(0,10) : ''}`;
-        if (!grouped[key]) {
-          grouped[key] = {
-            cleaner_name: r.cleaner_name,
-            employee_code: r.employee_code,
-            site_name: r.site_name,
-            time_ins: [],
-            time_outs: [],
-            remarks: [],
-            pic_names: new Set(),
-            statuses: []
-          };
-        }
-        if (r.action_type === 'time_out') {
-          grouped[key].time_outs.push(r);
+      document.getElementById('workerModalTitle').textContent = '✏️ Edit Worker';
+      openModal('workerModal');
+    };
+
+    window.deleteWorker = async function(id, name) {
+      if (!confirm(`Delete worker "${name}"?`)) return;
+      try {
+        const res = await fetch(`/api/operations/workers/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast(`Worker "${name}" deleted.`);
+          await loadWorkers();
         } else {
-          grouped[key].time_ins.push(r);
+          alert('Failed to delete worker.');
         }
-        if (r.remark) grouped[key].remarks.push(r.remark);
-        if (r.pic_name) grouped[key].pic_names.add(r.pic_name);
-        grouped[key].statuses.push(r.status);
-      });
-
-      const items = Object.values(grouped);
-      summaryTableBody.innerHTML = items.map(item => {
-        // Earliest In
-        const firstIn = item.time_ins.length ? item.time_ins[item.time_ins.length - 1] : null;
-        // Latest Out
-        const latestOut = item.time_outs.length ? item.time_outs[0] : null;
-
-        const timeInStr = firstIn ? formatTime(firstIn.created_at) : '<span style="color:#94a3b8;">Missing</span>';
-        const timeOutStr = latestOut ? formatTime(latestOut.created_at) : '<span style="color:#d97706; font-weight:600;">In Progress</span>';
-
-        // Calculate shift duration
-        let durationStr = '—';
-        if (firstIn && latestOut) {
-          const inDate = new Date(firstIn.created_at);
-          const outDate = new Date(latestOut.created_at);
-          const diffMs = outDate - inDate;
-          if (diffMs > 0) {
-            const hrs = Math.floor(diffMs / 3600000);
-            const mins = Math.floor((diffMs % 3600000) / 60000);
-            durationStr = `<strong>${hrs}h ${mins}m</strong>`;
-          }
-        }
-
-        // Status badge
-        let dayStatus = '<span class="badge badge-pending">Pending</span>';
-        if (item.statuses.includes('rejected')) {
-          dayStatus = '<span class="badge badge-rejected">Rejected ❌</span>';
-        } else if (item.statuses.every(s => s === 'approved')) {
-          dayStatus = '<span class="badge badge-approved">Approved ✅</span>';
-        }
-
-        const picStr = Array.from(item.pic_names).join(', ') || '—';
-        const remarksStr = item.remarks.length ? item.remarks.map(rem => `"${rem}"`).join('; ') : '—';
-
-        return `
-          <tr>
-            <td><strong>${item.cleaner_name}</strong></td>
-            <td><code>${item.employee_code}</code></td>
-            <td>${item.site_name}</td>
-            <td>${timeInStr}</td>
-            <td>${timeOutStr}</td>
-            <td>${durationStr}</td>
-            <td>${dayStatus}</td>
-            <td>${picStr}</td>
-            <td style="font-size:0.85rem; color:#475569; font-style:italic;">${remarksStr}</td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // Render Raw Swipe Log Table
-    function renderLogTable(rows) {
-      if (!rows.length) {
-        logTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#64748b;">No records found.</td></tr>';
-        return;
+      } catch (err) {
+        alert('Network error.');
       }
+    };
 
-      logTableBody.innerHTML = rows.map(r => {
-        const isOut = r.action_type === 'time_out';
-        const typeBadge = isOut
-          ? '<span class="badge badge-out">🔴 Time Out</span>'
-          : '<span class="badge badge-in">🟢 Time In</span>';
+    document.getElementById('workerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('formWorkerId').value;
+      const payload = {
+        site_id: parseInt(document.getElementById('formWorkerSite').value, 10),
+        name: document.getElementById('formWorkerName').value.trim(),
+        employee_code: document.getElementById('formWorkerCode').value.trim(),
+        worker_type: document.getElementById('formWorkerType').value,
+        salary_type: document.getElementById('formWorkerSalaryType').value,
+        base_salary: parseFloat(document.getElementById('formWorkerBaseSalary').value),
+        phone: document.getElementById('formWorkerPhone').value.trim()
+      };
 
-        let statusBadge = `<span class="badge badge-${r.status}">${r.status}</span>`;
-        if (r.status === 'approved') statusBadge = '<span class="badge badge-approved">Approved ✅</span>';
-        if (r.status === 'rejected') statusBadge = '<span class="badge badge-rejected">Rejected ❌</span>';
-
-        let actionLinks = '';
-        if (r.status === 'pending' && r.approval_token) {
-          const appUrl = `${window.location.origin}/approve.html?token=${r.approval_token}`;
-          const cleanPhone = normalizeWhatsAppNumber(r.pic_whatsapp);
-          const typeTxt = r.action_type === 'time_out' ? 'Time Out 🔴' : 'Time In 🟢';
-          const msg = `🔔 *ATTENDANCE APPROVAL NEEDED* [${typeTxt}]\n\n👤 *Cleaner:* ${r.cleaner_name} (${r.employee_code})\n📍 *Site:* ${r.site_name}\n⏱️ *Action:* ${typeTxt}\n\n👉 *Review selfie & approve:*\n${appUrl}`;
-          const waLink = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}` : null;
-          
-          actionLinks = `
-            <div style="margin-top:4px; display:flex; gap:4px; flex-wrap:wrap;">
-              ${waLink ? `<a href="${waLink}" target="_blank" style="display:inline-block; font-size:0.72rem; background:#25d366; color:white; padding:2px 6px; border-radius:4px; text-decoration:none; font-weight:700;">💬 WA PIC</a>` : ''}
-              <a href="${appUrl}" target="_blank" style="display:inline-block; font-size:0.72rem; background:#3b82f6; color:white; padding:2px 6px; border-radius:4px; text-decoration:none; font-weight:700;">🔗 Approve</a>
-            </div>
-          `;
-        }
-
-        const distStr = r.distance_meters !== null ? `${Math.round(r.distance_meters)}m` : '—';
-        const remarkStr = r.remark ? `<span style="font-style:italic; font-size:0.85rem;">"${r.remark}"</span>` : '—';
-
-        return `
-          <tr>
-            <td style="white-space:nowrap;">${formatDateTime(r.created_at)}</td>
-            <td><strong>${r.cleaner_name}</strong></td>
-            <td><code>${r.employee_code}</code></td>
-            <td>${typeBadge}</td>
-            <td>${r.site_name}</td>
-            <td>${distStr}</td>
-            <td>${statusBadge}${actionLinks}</td>
-            <td>${r.pic_name || '—'}</td>
-            <td>${remarkStr}</td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // Load Metrics and Attendance Data
-    async function loadData() {
-      const params = new URLSearchParams();
-      if (siteFilter.value) params.set('site_id', siteFilter.value);
-      if (dateFilter.value) params.set('date', dateFilter.value);
-      if (statusFilter.value) params.set('status', statusFilter.value);
-      if (searchFilter.value.trim()) params.set('search', searchFilter.value.trim());
+      const url = id ? `/api/operations/workers/${id}` : '/api/operations/workers';
+      const method = id ? 'PUT' : 'POST';
 
       try {
-        // Fetch summary
-        const summaryRes = await fetch(`/api/operations/summary?${params.toString()}`);
-        const summary = await summaryRes.json();
-        document.getElementById('metricSites').textContent = summary.site_count || 0;
-        document.getElementById('metricSwipes').textContent = summary.total_checkins || 0;
-        document.getElementById('metricApproved').textContent = summary.approved_count || 0;
-        document.getElementById('metricPending').textContent = summary.pending_count || 0;
-        document.getElementById('metricRejected').textContent = summary.rejected_count || 0;
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Failed to save worker.');
+          return;
+        }
+        closeModal('workerModal');
+        showToast(id ? 'Worker updated!' : 'Worker added!');
+        await loadWorkers();
+      } catch (err) {
+        alert('Network error.');
+      }
+    });
 
-        // Fetch attendance rows
-        const attRes = await fetch(`/api/operations/attendance?${params.toString()}`);
-        const att = await attRes.json();
-        currentRows = att.rows || [];
+    document.getElementById('workerSiteFilter').addEventListener('change', loadWorkers);
+    document.getElementById('workerTypeFilter').addEventListener('change', loadWorkers);
+    document.getElementById('workerSearchInput').addEventListener('input', loadWorkers);
 
-        renderPairedSummary(currentRows);
-        renderLogTable(currentRows);
+    // ==========================================
+    // MODULE 3: ATTENDANCE SHEET
+    // ==========================================
+    async function loadAttendanceSheet() {
+      const siteId = document.getElementById('attSiteSelect').value;
+      const year = document.getElementById('attYearSelect').value;
+      const month = document.getElementById('attMonthSelect').value;
 
-        // Update print subtitle
-        const selectedSiteText = siteFilter.options[siteFilter.selectedIndex]?.text || 'All Sites';
-        const selectedDateText = dateFilter.value || 'Today';
-        document.getElementById('printSheetSub').textContent = `Site: ${selectedSiteText} | Date: ${selectedDateText} | Generated: ${new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}`;
+      if (!siteId) return;
 
-        lastUpdated.textContent = 'Updated ' + new Date().toLocaleTimeString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' });
-      } catch (e) {
-        console.error('Error fetching data', e);
+      try {
+        const res = await fetch(`/api/operations/attendance-sheet?site_id=${siteId}&year=${year}&month=${month}`);
+        currentAttSheet = await res.json();
+
+        // Update banner
+        const b = document.getElementById('attSheetBanner');
+        b.style.display = 'block';
+        b.innerHTML = `
+          <strong>Site:</strong> ${currentAttSheet.site.name} |
+          <strong>Pattern:</strong> ${currentAttSheet.site.working_days_pattern} |
+          <strong>Hours:</strong> ${currentAttSheet.site.working_time_start} - ${currentAttSheet.site.working_time_end} (${currentAttSheet.site.break_time_minutes}m unpaid break) |
+          <strong>Public Holidays:</strong> ${currentAttSheet.public_holidays.length} PH days in month |
+          <strong>Total Active Workers:</strong> ${currentAttSheet.workers.length}
+        `;
+
+        const tbody = document.getElementById('attSheetTableBody');
+        if (!currentAttSheet.records || !currentAttSheet.records.length) {
+          tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px; color:#64748b;">No attendance records for this month yet. Click "Update Worker Attendance" or wait for mobile PIC approvals.</td></tr>';
+          return;
+        }
+
+        // Map workers by ID
+        const wMap = {};
+        currentAttSheet.workers.forEach(w => { wMap[w.id] = w; });
+
+        tbody.innerHTML = currentAttSheet.records.map(r => {
+          const w = wMap[r.worker_id] || { name: 'Worker #' + r.worker_id, worker_type: 'Cleaner' };
+          let badgeClass = 'badge-present';
+          if (r.status === 'Absent') badgeClass = 'badge-absent';
+          else if (r.status === 'Half Day') badgeClass = 'badge-halfday';
+          else if (r.status === 'Leave') badgeClass = 'badge-leave';
+          else if (r.status === 'OT') badgeClass = 'badge-ot';
+
+          const srcLabel = r.source === 'pic_phone' ? '📱 PIC Phone' : '✍️ OPS Manual';
+
+          return `
+            <tr>
+              <td><strong>${r.attendance_date.substring(0, 10)}</strong></td>
+              <td><strong>${w.name}</strong></td>
+              <td><span class="badge ${w.worker_type === 'Cleaner' ? 'badge-monthly' : 'badge-daily'}">${w.worker_type}</span></td>
+              <td><span class="badge ${badgeClass}">${r.status}</span></td>
+              <td>${r.in_time || '—'}</td>
+              <td>${r.out_time || '—'}</td>
+              <td>${r.late_hours > 0 ? `<span style="color:#dc2626; font-weight:700;">${r.late_hours}h</span>` : '0h'}</td>
+              <td>${r.ot_hours > 0 ? `<span style="color:#7c3aed; font-weight:700;">${r.ot_hours}h</span>` : '0h'}</td>
+              <td><span style="font-size:0.75rem; color:#475569;">${srcLabel}</span></td>
+              <td style="font-size:0.83rem; color:#64748b; font-style:italic;">${r.remarks || '—'}</td>
+              <td>
+                <button type="button" class="btn-secondary btn-sm" onclick="quickEditAttendance(${r.site_id}, ${r.worker_id}, '${r.attendance_date.substring(0, 10)}', '${r.status}', '${r.in_time || ''}', '${r.out_time || ''}', '${r.remarks || ''}')">✏️ Edit</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (err) {
+        console.error('Failed to load attendance sheet', err);
       }
     }
 
-    filterForm.addEventListener('submit', (e) => {
+    document.getElementById('loadAttSheetBtn').addEventListener('click', loadAttendanceSheet);
+    document.getElementById('attSiteSelect').addEventListener('change', loadAttendanceSheet);
+
+    document.getElementById('openUpdateAttBtn').addEventListener('click', () => {
+      document.getElementById('attendanceForm').reset();
+      document.getElementById('modalAttDate').value = new Date().toISOString().substring(0, 10);
+      document.getElementById('modalAttSite').value = document.getElementById('attSiteSelect').value || (sites[0]?.id || '');
+      openModal('attendanceModal');
+    });
+
+    window.quickEditAttendance = function(siteId, workerId, dateStr, status, inTime, outTime, remarks) {
+      document.getElementById('modalAttSite').value = siteId;
+      document.getElementById('modalAttWorker').value = workerId;
+      document.getElementById('modalAttDate').value = dateStr;
+      document.getElementById('modalAttStatus').value = status;
+      document.getElementById('modalAttIn').value = inTime || '09:00';
+      document.getElementById('modalAttOut').value = outTime || '17:00';
+      document.getElementById('modalAttRemarks').value = remarks || '';
+      openModal('attendanceModal');
+    };
+
+    document.getElementById('attendanceForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      loadData();
+      const payload = {
+        site_id: parseInt(document.getElementById('modalAttSite').value, 10),
+        worker_id: parseInt(document.getElementById('modalAttWorker').value, 10),
+        date: document.getElementById('modalAttDate').value,
+        status: document.getElementById('modalAttStatus').value,
+        in_time: document.getElementById('modalAttIn').value || null,
+        out_time: document.getElementById('modalAttOut').value || null,
+        late_hours: document.getElementById('modalAttLate').value ? parseFloat(document.getElementById('modalAttLate').value) : undefined,
+        ot_hours: document.getElementById('modalAttOt').value ? parseFloat(document.getElementById('modalAttOt').value) : undefined,
+        remarks: document.getElementById('modalAttRemarks').value.trim()
+      };
+
+      try {
+        const res = await fetch('/api/operations/attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Failed to save attendance.');
+          return;
+        }
+        closeModal('attendanceModal');
+        showToast('✅ Attendance updated & monthly sheet regenerated!');
+        await loadAttendanceSheet();
+        await loadSummary();
+      } catch (err) {
+        alert('Network error saving attendance.');
+      }
     });
 
-    document.getElementById('refreshBtn').addEventListener('click', () => {
-      loadData();
-      loadPics();
-      showToast('Dashboard refreshed with latest Time In/Out updates.');
-    });
+    // ==========================================
+    // MODULE 4: SALARY ENGINE & ACCOUNTS REPORT
+    // ==========================================
+    async function calculatePayroll() {
+      const siteId = document.getElementById('payrollSiteSelect').value;
+      const year = document.getElementById('payrollYearSelect').value;
+      const month = document.getElementById('payrollMonthSelect').value;
 
-    document.getElementById('printBtn').addEventListener('click', () => {
+      if (!siteId) return;
+
+      try {
+        const res = await fetch(`/api/operations/payroll?site_id=${siteId}&year=${year}&month=${month}`);
+        currentPayroll = await res.json();
+
+        const tbody = document.getElementById('payrollTableBody');
+        const tfoot = document.getElementById('payrollTableFoot');
+
+        if (!currentPayroll.workers_payroll || !currentPayroll.workers_payroll.length) {
+          tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px; color:#64748b;">No workers assigned to this site.</td></tr>';
+          tfoot.innerHTML = '';
+          return;
+        }
+
+        tbody.innerHTML = currentPayroll.workers_payroll.map(p => {
+          const isMonthly = p.salary_type === 'monthly';
+          const att = p.attendance_summary;
+          const ded = p.deductions;
+
+          return `
+            <tr>
+              <td><strong>${p.worker_name}</strong></td>
+              <td>
+                <span class="badge ${p.worker_type === 'Cleaner' ? 'badge-monthly' : 'badge-daily'}">${p.worker_type}</span><br/>
+                <span style="font-size:0.75rem; color:#64748b;">${isMonthly ? 'Monthly Salary' : 'Daily Salary'}</span>
+              </td>
+              <td><strong>RM ${p.base_salary.toFixed(2)}</strong></td>
+              <td>
+                <strong>${p.auto_counted_working_days} days</strong><br/>
+                <span style="font-size:0.75rem; color:#64748b;">(${p.pattern})</span>
+              </td>
+              <td>${p.net_working_hours}h <span style="font-size:0.72rem; color:#d97706;">(-${p.break_time_minutes}m break)</span></td>
+              <td>RM ${p.per_day_salary.toFixed(2)}</td>
+              <td>RM ${p.per_hour_salary.toFixed(2)}</td>
+              <td style="font-size:0.8rem;">
+                🟢 ${att.present_days}d | 🔴 ${att.absent_days}d | 🟡 ${att.half_days}d<br/>
+                Late: <strong>${att.total_late_hours}h</strong> | OT: <strong>${att.total_ot_hours}h</strong>
+              </td>
+              <td style="color:#dc2626; font-size:0.82rem;">
+                ${ded.absent > 0 ? `Absent: -RM ${ded.absent.toFixed(2)}<br/>` : ''}
+                ${ded.half_day > 0 ? `Half: -RM ${ded.half_day.toFixed(2)}<br/>` : ''}
+                ${ded.late > 0 ? `Late: -RM ${ded.late.toFixed(2)}<br/>` : ''}
+                <strong>Total Ded: -RM ${ded.total.toFixed(2)}</strong>
+              </td>
+              <td style="color:#7c3aed; font-weight:700;">+RM ${p.ot_pay.toFixed(2)}</td>
+              <td style="background:#f1f5f9; font-size:1.05rem; font-weight:800; color:#1e3a8a;">
+                RM ${p.net_salary.toFixed(2)}
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        tfoot.innerHTML = `
+          <tr>
+            <td colspan="2">SITE TOTALS</td>
+            <td>RM ${currentPayroll.totals.total_gross.toFixed(2)}</td>
+            <td colspan="5"></td>
+            <td style="color:#dc2626;">-RM ${currentPayroll.totals.total_deductions.toFixed(2)}</td>
+            <td style="color:#7c3aed;">+RM ${currentPayroll.totals.total_ot_pay.toFixed(2)}</td>
+            <td style="background:#e0f2fe; color:#0369a1; font-size:1.15rem;">RM ${currentPayroll.totals.total_net.toFixed(2)}</td>
+          </tr>
+        `;
+
+        document.getElementById('kpiPayroll').textContent = `RM ${currentPayroll.totals.total_net.toFixed(2)}`;
+        document.getElementById('kpiPayrollSub').textContent = `${currentPayroll.site.name} (${currentPayroll.workers_payroll.length} workers)`;
+
+      } catch (err) {
+        console.error('Failed to calculate payroll', err);
+      }
+    }
+
+    document.getElementById('calculatePayrollBtn').addEventListener('click', calculatePayroll);
+    document.getElementById('payrollSiteSelect').addEventListener('change', calculatePayroll);
+
+    document.getElementById('printPayrollBtn').addEventListener('click', () => {
       window.print();
     });
 
-    // Initialize
-    async function init() {
+    // Email to Accounts Modal
+    document.getElementById('openEmailAccountsBtn').addEventListener('click', () => {
+      if (!currentPayroll || !currentPayroll.workers_payroll || !currentPayroll.workers_payroll.length) {
+        alert('Please select a site and click "Calculate Salary" first.');
+        return;
+      }
+      const siteName = currentPayroll.site.name;
+      const mNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const mStr = `${mNames[currentPayroll.month]} ${currentPayroll.year}`;
+
+      document.getElementById('emailSubject').value = `Payroll Statement: ${siteName} — ${mStr} [Total Net: RM ${currentPayroll.totals.total_net.toFixed(2)}]`;
+      document.getElementById('emailPreviewBox').innerHTML = `
+        <strong>Summary to be dispatched:</strong><br/>
+        🏢 <strong>Site:</strong> ${siteName}<br/>
+        📅 <strong>Period:</strong> ${mStr}<br/>
+        👥 <strong>Workers Count:</strong> ${currentPayroll.workers_payroll.length}<br/>
+        💵 <strong>Gross Base Total:</strong> RM ${currentPayroll.totals.total_gross.toFixed(2)}<br/>
+        🔻 <strong>Total Deductions:</strong> RM ${currentPayroll.totals.total_deductions.toFixed(2)}<br/>
+        ⭐ <strong>Total OT Pay:</strong> RM ${currentPayroll.totals.total_ot_pay.toFixed(2)}<br/>
+        💰 <strong>Final Net Payable:</strong> <span style="font-size:1rem; font-weight:800; color:#166534;">RM ${currentPayroll.totals.total_net.toFixed(2)}</span>
+      `;
+      openModal('emailModal');
+    });
+
+    document.getElementById('emailForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const siteId = document.getElementById('payrollSiteSelect').value;
+      const year = document.getElementById('payrollYearSelect').value;
+      const month = document.getElementById('payrollMonthSelect').value;
+      const recipient = document.getElementById('emailRecipient').value.trim();
+      const notes = document.getElementById('emailNotes').value.trim();
+
+      const btn = document.getElementById('btnSubmitEmail');
+      btn.disabled = true;
+      btn.textContent = 'Dispatching...';
+
+      try {
+        const res = await fetch('/api/operations/payroll/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            site_id: siteId,
+            year,
+            month,
+            recipient_email: recipient,
+            notes
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Failed to dispatch email.');
+          return;
+        }
+        closeModal('emailModal');
+        showToast(`✅ ${data.message}`);
+      } catch (err) {
+        alert('Network error dispatching email.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🚀 Send Report';
+      }
+    });
+
+    // ==========================================
+    // MODULE 5: LIVE MOBILE FEED & PIC APPROVALS
+    // ==========================================
+    async function loadLiveFeed() {
+      const siteId = document.getElementById('liveSiteFilter').value;
+      const status = document.getElementById('liveStatusFilter').value;
+
+      const params = new URLSearchParams();
+      if (siteId) params.set('site_id', siteId);
+      if (status) params.set('status', status);
+
+      try {
+        const res = await fetch(`/api/operations/attendance?${params.toString()}`);
+        const data = await res.json();
+        const rows = data.rows || [];
+
+        const tbody = document.getElementById('liveTableBody');
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#64748b;">No clock-in activity found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = rows.map(r => {
+          const isOut = r.action_type === 'time_out';
+          const typeBadge = isOut ? '<span class="badge badge-absent">🔴 Time Out</span>' : '<span class="badge badge-present">🟢 Time In</span>';
+          let stBadge = `<span class="badge badge-leave">${r.status}</span>`;
+          if (r.status === 'approved') stBadge = '<span class="badge badge-present">Approved ✅</span>';
+          else if (r.status === 'rejected') stBadge = '<span class="badge badge-absent">Rejected ❌</span>';
+          else if (r.status === 'pending') stBadge = '<span class="badge badge-halfday">Pending PIC ⏳</span>';
+
+          const appUrl = `${window.location.origin}/approve.html?token=${r.approval_token}`;
+          const cleanPhone = r.pic_whatsapp ? String(r.pic_whatsapp).replace(/\D/g, '') : '';
+          const msg = `🔔 *ATTENDANCE APPROVAL NEEDED* [${isOut ? 'TIME OUT 🔴' : 'TIME IN 🟢'}]\n\n👤 *Worker:* ${r.cleaner_name} (${r.employee_code})\n📍 *Site:* ${r.site_name}\n\n👉 *Review selfie & approve:*\n${appUrl}`;
+          const waLink = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}` : null;
+
+          let picActions = '—';
+          if (r.status === 'pending') {
+            picActions = `
+              <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                ${waLink ? `<a href="${waLink}" target="_blank" class="btn-sm" style="background:#25d366; color:white;">💬 WA PIC</a>` : ''}
+                <a href="${appUrl}" target="_blank" class="btn-sm btn-secondary">🔗 Review</a>
+              </div>
+            `;
+          }
+
+          const dist = r.distance_meters !== null ? `${Math.round(r.distance_meters)}m` : '—';
+          const timeStr = r.created_at ? new Date(r.created_at).toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur', dateStyle: 'short', timeStyle: 'short' }) : '—';
+
+          return `
+            <tr>
+              <td><span style="font-size:0.8rem; font-family:monospace;">${timeStr}</span></td>
+              <td><strong>${r.cleaner_name}</strong></td>
+              <td><code>${r.employee_code}</code></td>
+              <td>${r.site_name}</td>
+              <td>${typeBadge}</td>
+              <td>${dist}</td>
+              <td>${stBadge}</td>
+              <td>${r.pic_name ? `${r.pic_name} (${r.pic_whatsapp})` : '—'}</td>
+              <td>${picActions}</td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (err) {
+        console.error('Failed to load live feed', err);
+      }
+    }
+
+    document.getElementById('liveSiteFilter').addEventListener('change', loadLiveFeed);
+    document.getElementById('liveStatusFilter').addEventListener('change', loadLiveFeed);
+
+    // ==========================================
+    // SUMMARY STATS
+    // ==========================================
+    async function loadSummary() {
+      try {
+        const res = await fetch('/api/operations/summary');
+        const s = await res.json();
+        document.getElementById('kpiSites').textContent = s.site_count || 0;
+        document.getElementById('kpiWorkers').textContent = s.cleaner_count || 0;
+        document.getElementById('kpiPresent').textContent = s.today_present || 0;
+        document.getElementById('kpiAbsent').textContent = s.today_absent || 0;
+        document.getElementById('kpiPending').textContent = s.pending_count || 0;
+      } catch (err) {
+        console.error('Failed to load summary', err);
+      }
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+      await loadSummary();
       await loadSites();
-      await loadPics();
-      await loadData();
-      // Auto-refresh every 12 seconds so updates from cleaners & PICs land in real time
-      setInterval(loadData, 12000);
+      await loadWorkers();
+      await loadAttendanceSheet();
+      await calculatePayroll();
+      showToast('🔄 Dashboard refreshed with latest live data.');
+    });
+
+    // Initialize Dashboard
+    async function init() {
+      const now = new Date();
+      document.getElementById('attMonthSelect').value = String(now.getMonth() + 1);
+      document.getElementById('payrollMonthSelect').value = String(now.getMonth() + 1);
+      document.getElementById('attYearSelect').value = String(now.getFullYear());
+      document.getElementById('payrollYearSelect').value = String(now.getFullYear());
+
+      await loadSummary();
+      await loadSites();
+      await loadWorkers();
+      await loadAttendanceSheet();
+      await calculatePayroll();
+
+      // Auto-refresh live feed every 15 seconds
+      setInterval(() => {
+        loadSummary();
+        const liveTab = document.getElementById('tab-live');
+        if (liveTab && liveTab.style.display !== 'none') {
+          loadLiveFeed();
+        }
+      }, 15000);
     }
 
     init();

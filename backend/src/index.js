@@ -6,6 +6,7 @@ const checkinRouter = require('./routes/checkin');
 const approveRouter = require('./routes/approve');
 const operationsRouter = require('./routes/operations');
 const pairRouter = require('./routes/pair');
+const { migrate } = require('./migrate');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -31,6 +32,12 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 const PORT = process.env.PORT || 3000;
 
 async function start() {
+  try {
+    await migrate();
+  } catch (err) {
+    console.warn('Auto-migration warning on boot:', err.message);
+  }
+
   app.listen(PORT, () => {
     console.log(`Attendance backend listening on http://localhost:${PORT}`);
     console.log(`Clock-in page:  http://localhost:${PORT}/checkin.html`);
