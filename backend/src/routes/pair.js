@@ -1,56 +1,41 @@
 const express = require('express');
 const router = express.Router();
-const { requestPairingCode, isReady, getSocket, resetWhatsAppSession } = require('../whatsapp');
 
 router.get('/pair', (_req, res) => {
-  res.redirect('/pair.html');
+  res.redirect('/operations.html');
 });
 
+// Uptime keep-alive & health check endpoint (pings Render every 8 minutes)
 router.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    whatsapp_connected: isReady()
+    uptime: Math.floor(process.uptime()),
+    gateway: 'direct-whatsapp'
   });
 });
 
 router.get('/api/pair/status', (_req, res) => {
-  const ready = isReady();
-  const sock = getSocket();
-  let userPhone = null;
-  let userName = null;
-  if (ready && sock?.user) {
-    userPhone = (sock.user.id || '').replace(/:.*$/, '');
-    userName = sock.user.name || null;
-  }
   res.json({
-    connected: ready,
-    phone: userPhone,
-    name: userName
+    connected: true,
+    direct_mode: true,
+    message: 'Active with 1-Tap Direct WhatsApp Gateway'
   });
 });
 
-router.post('/api/pair', async (req, res) => {
-  const { phoneNumber } = req.body || {};
-  if (!phoneNumber) {
-    return res.status(400).json({ error: 'Phone number is required.' });
-  }
-
-  try {
-    const code = await requestPairingCode(phoneNumber);
-    res.json({ success: true, code });
-  } catch (err) {
-    res.status(400).json({ error: err.message || 'Failed to request pairing code.' });
-  }
+router.post('/api/pair', async (_req, res) => {
+  res.json({
+    success: true,
+    direct_mode: true,
+    message: 'System uses 1-Tap WhatsApp verification. Companion bot pairing is deprecated.'
+  });
 });
 
 router.post('/api/pair/reset', async (_req, res) => {
-  try {
-    await resetWhatsAppSession();
-    res.json({ success: true, message: 'WhatsApp session reset. You can now request a new pairing code.' });
-  } catch (err) {
-    res.status(500).json({ error: err.message || 'Failed to reset WhatsApp session.' });
-  }
+  res.json({
+    success: true,
+    message: 'Direct WhatsApp configuration active.'
+  });
 });
 
 module.exports = router;

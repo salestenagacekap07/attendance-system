@@ -2,7 +2,6 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../db');
 const { distanceMeters, isWithinGeofence } = require('../geofence');
-const { sendNotification } = require('../whatsapp');
 
 const router = express.Router();
 
@@ -118,13 +117,6 @@ router.post('/checkin', async (req, res) => {
         share_url: `https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`,
       };
     });
-
-    // Best-effort background bot notification (text only, clean & fast)
-    for (const pic of pics) {
-      sendNotification(pic.whatsapp_number, waMessage, null).catch((err) => {
-        console.warn('Background bot alert failed/skipped for PIC', pic.whatsapp_number, err.message);
-      });
-    }
 
     if (pics.length === 0) {
       return res.status(200).json({
