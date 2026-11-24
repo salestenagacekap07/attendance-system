@@ -1,6 +1,7 @@
 const express = require('express');
+const nodemailer = require('nodemailer');
 const { pool } = require('../db');
-const { calculateWorkerSalary } = require('../salaryCalculator');
+const { calculateWorkerSalary, getDateDetails } = require('../salaryCalculator');
 
 const router = express.Router();
 
@@ -416,6 +417,57 @@ router.get('/api/operations/attendance-sheet', async function (req, res) {
       )
     ]);
 
+    const phSet = new Set(phRes.rows.map(p => p.holiday_date.substring(0, 10)));
+
+    // Calculate per-worker attendance summary (e.g. how many times attended this month)
+    const workersSummary = workers.map(w => {
+      const workerRecords = attRes.rows.filter(r => r.worker_id === w.id);
+      let timesAttended = 0;
+      let presentCount = 0;
+      let absentCount = 0;
+      let halfDayCount = 0;
+      let leaveCount = 0;
+      let otCount = 0;
+      let sundayWorkCount = 0;
+      let phWorkCount = 0;
+      let totalOtHours = 0;
+
+      workerRecords.forEach(r => {
+        const { dateStr, isSunday } = getDateDetails(r.attendance_date);
+        const isPH = phSet.has(dateStr);
+
+        if (['Present', 'OT', 'Half Day'].includes(r.status)) {
+          timesAttended += (r.status === 'Half Day' ? 0.5 : 1);
+          if (isSunday) sundayWorkCount += 1;
+          if (isPH) phWorkCount += 1;
+        }
+
+        if (r.status === 'Present') presentCount++;
+        else if (r.status === 'Absent') absentCount++;
+        else if (r.status === 'Half Day') halfDayCount++;
+        else if (r.status === 'Leave') leaveCount++;
+        else if (r.status === 'OT') otCount++;
+
+        totalOtHours += Number(r.ot_hours) || 0;
+      });
+
+      return {
+        worker_id: w.id,
+        worker_name: w.name,
+        employee_code: w.employee_code,
+        worker_type: w.worker_type,
+        times_attended: timesAttended,
+        present_count: presentCount,
+        absent_count: absentCount,
+        half_day_count: halfDayCount,
+        leave_count: leaveCount,
+        ot_count: otCount,
+        sunday_work_count: sundayWorkCount,
+        ph_work_count: phWorkCount,
+        total_ot_hours: Number(totalOtHours.toFixed(2))
+      };
+    });
+
     return res.json({
       site,
       year: currentYear,
@@ -423,10 +475,83 @@ router.get('/api/operations/attendance-sheet', async function (req, res) {
       total_days: lastDayNum,
       public_holidays: phRes.rows,
       workers,
-      records: attRes.rows
+      records: attRes.rows,
+      workers_summary: workersSummary
     });
   } catch (error) {
     console.error('Error in /api/operations/attendance-sheet', error);
+    return res.status(500).json({ error: 'Internal server error: ' + error.message });
+  }
+});
+
+// Auto-generate standard monthly schedule for all workers at a site
+router.post('/api/operations/attendance/generate-month', async function (req, res) {
+  try {
+    const { site_id, year, month } = req.body || {};
+    if (!site_id) return res.status(400).json({ error: 'site_id is required' });
+
+    const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    const currentMonth = month ? parseInt(month, 10) : (new Date().getMonth() + 1);
+
+    const siteRes = await pool.query('SELECT * FROM sites WHERE id = $1', [Number(site_id)]);
+    if (siteRes.rows.length === 0) return res.status(404).json({ error: 'Site not found' });
+    const site = siteRes.rows[0];
+
+    const workersRes = await pool.query('SELECT id, name FROM cleaners WHERE site_id = $1', [Number(site_id)]);
+    const workers = workersRes.rows;
+    if (workers.length === 0) return res.status(400).json({ error: 'No workers assigned to this site yet.' });
+
+    const startDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
+    const lastDayNum = new Date(currentYear, currentMonth, 0).getDate();
+    const endDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(lastDayNum).padStart(2, '0')}`;
+
+    const phRes = await pool.query(
+      `SELECT holiday_date::text AS holiday_date FROM public_holidays WHERE holiday_date >= $1 AND holiday_date <= $2`,
+      [startDate, endDate]
+    );
+    const phSet = new Set(phRes.rows.map(p => p.holiday_date.substring(0, 10)));
+
+    const pattern = site.working_days_pattern || 'Mon-Fri';
+    let insertedCount = 0;
+
+    for (let d = 1; d <= lastDayNum; d++) {
+      const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dt = new Date(currentYear, currentMonth - 1, d);
+      const dow = dt.getDay(); // 0 = Sun, 6 = Sat
+
+      const isSunday = (dow === 0);
+      const isSaturday = (dow === 6);
+      const isPH = phSet.has(dateStr);
+
+      let isWorkingDay = false;
+      if (pattern === 'Mon-Sat') {
+        isWorkingDay = !isSunday && !isPH;
+      } else {
+        isWorkingDay = !isSunday && !isSaturday && !isPH;
+      }
+
+      if (isWorkingDay) {
+        for (const w of workers) {
+          const insertRes = await pool.query(
+            `INSERT INTO daily_attendance (
+               site_id, worker_id, attendance_date, status, in_time, out_time, remarks, source
+             )
+             VALUES ($1, $2, $3, 'Present', $4, $5, 'Standard Scheduled Shift', 'ops_schedule')
+             ON CONFLICT (site_id, worker_id, attendance_date) DO NOTHING`,
+            [Number(site_id), w.id, dateStr, site.working_time_start || '09:00', site.working_time_end || '17:00']
+          );
+          if (insertRes.rowCount > 0) insertedCount++;
+        }
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: `Generated monthly attendance schedule for ${workers.length} worker(s). (${insertedCount} scheduled days added without overwriting existing records).`,
+      inserted_count: insertedCount
+    });
+  } catch (error) {
+    console.error('Error in /api/operations/attendance/generate-month', error);
     return res.status(500).json({ error: 'Internal server error: ' + error.message });
   }
 });
@@ -596,14 +721,18 @@ router.get('/api/operations/payroll', async function (req, res) {
   }
 });
 
-// Send Report by Email to Accounts
+// Send Report by Email to Accounts (Default: acctcm06@gmail.com)
 router.post('/api/operations/payroll/send-email', async function (req, res) {
   try {
     const { site_id, year, month, recipient_email, notes } = req.body || {};
 
-    if (!site_id || !recipient_email) {
-      return res.status(400).json({ error: 'site_id and recipient_email are required' });
+    if (!site_id) {
+      return res.status(400).json({ error: 'site_id is required' });
     }
+
+    const targetEmail = (recipient_email && recipient_email.trim().length > 0)
+      ? recipient_email.trim()
+      : 'acctcm06@gmail.com';
 
     const currentYear = year ? parseInt(year, 10) : new Date().getFullYear();
     const currentMonth = month ? parseInt(month, 10) : (new Date().getMonth() + 1);
@@ -664,27 +793,112 @@ router.post('/api/operations/payroll/send-email', async function (req, res) {
       return acc;
     }, { total_gross: 0, total_deductions: 0, total_ot_pay: 0, total_net: 0 });
 
+    const mNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthName = `${mNames[currentMonth]} ${currentYear}`;
+    const subject = `Payroll & Attendance Statement: ${site.name} — ${monthName} [Net Total: RM ${totals.total_net.toFixed(2)}]`;
+
+    // Construct clear, comprehensive plain-text body with exact Days Worked Formula
+    let textReport = `==========================================================\n`;
+    textReport += `ACCOUNTS & PAYROLL STATEMENT — ${site.name.toUpperCase()}\n`;
+    textReport += `Period: ${monthName}\n`;
+    textReport += `Site Work Pattern: ${site.working_days_pattern} (${site.working_time_start} - ${site.working_time_end})\n`;
+    textReport += `Generated: ${new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}\n`;
+    textReport += `==========================================================\n\n`;
+
+    textReport += `SUMMARY TOTALS:\n`;
+    textReport += `- Total Active Workers: ${payrollItems.length}\n`;
+    textReport += `- Gross Base Total: RM ${totals.total_gross.toFixed(2)}\n`;
+    textReport += `- Total Deductions: -RM ${totals.total_deductions.toFixed(2)}\n`;
+    textReport += `- Total Overtime Pay: +RM ${totals.total_ot_pay.toFixed(2)}\n`;
+    textReport += `>>> FINAL NET PAYABLE: RM ${totals.total_net.toFixed(2)} <<<\n\n`;
+
+    textReport += `----------------------------------------------------------\n`;
+    textReport += `INDIVIDUAL WORKER BREAKDOWN:\n`;
+    textReport += `----------------------------------------------------------\n`;
+
+    payrollItems.forEach((p, idx) => {
+      textReport += `\n${idx + 1}. ${p.worker_name} (${p.employee_code || 'Worker'}) — ${p.worker_type} [${p.salary_type.toUpperCase()}]\n`;
+      textReport += `   - Base Salary: RM ${p.base_salary.toFixed(2)}\n`;
+      textReport += `   - DAYS WORKED: ${p.days_worked?.formula || 'N/A'}\n`;
+      textReport += `   - Standard Scheduled Working Days: ${p.auto_counted_working_days} days\n`;
+      textReport += `   - Attendance: ${p.attendance_summary.present_days} Present | ${p.attendance_summary.absent_days} Absent | ${p.attendance_summary.half_days} Half Day\n`;
+      textReport += `   - Calculated Rates: RM ${p.per_day_salary.toFixed(2)}/day | RM ${p.per_hour_salary.toFixed(2)}/hour (${p.net_working_hours}h net/day)\n`;
+      textReport += `   - Deductions: Absent -RM ${p.deductions.absent.toFixed(2)}, Half Day -RM ${p.deductions.half_day.toFixed(2)}, Late (${p.attendance_summary.total_late_hours}h) -RM ${p.deductions.late.toFixed(2)} (Total Ded: -RM ${p.deductions.total.toFixed(2)})\n`;
+      textReport += `   - Overtime: Normal Mon–Sat (1.5x): ${p.ot_breakdown.normal_hours}h = +RM ${p.ot_breakdown.normal_pay.toFixed(2)} | Sunday/PH (2.0x): ${p.ot_breakdown.rest_ph_hours}h = +RM ${p.ot_breakdown.rest_ph_pay.toFixed(2)} (Total OT: +RM ${p.ot_pay.toFixed(2)})\n`;
+      textReport += `   >>> NET PAYABLE SALARY: RM ${p.net_salary.toFixed(2)} <<<\n`;
+    });
+
+    if (notes) {
+      textReport += `\n----------------------------------------------------------\n`;
+      textReport += `OPS EXECUTIVE REMARKS:\n${notes}\n`;
+    }
+
+    textReport += `\n==========================================================\n`;
+    textReport += `Certified by OPS Operations Executive.\n`;
+
     const reportData = {
       site_name: site.name,
       year: currentYear,
       month: currentMonth,
-      month_name: new Date(currentYear, currentMonth - 1).toLocaleString('en-MY', { month: 'long', year: 'numeric' }),
+      month_name: monthName,
+      recipient: targetEmail,
       workers: payrollItems,
       totals,
       notes: notes || '',
       generated_at: new Date().toISOString()
     };
 
-    // Save report in payroll_reports
+    // Save report in payroll_reports table
     await pool.query(
       `INSERT INTO payroll_reports (site_id, year, month, report_data, sent_to_email, sent_at)
        VALUES ($1, $2, $3, $4, $5, now())`,
-      [Number(site_id), currentYear, currentMonth, JSON.stringify(reportData), recipient_email.trim()]
+      [Number(site_id), currentYear, currentMonth, JSON.stringify(reportData), targetEmail]
     );
+
+    // Direct Gmail Web Compose link & mailto link (100% reliable on all devices)
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(targetEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(textReport)}`;
+    const mailtoUrl = `mailto:${targetEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(textReport)}`;
+
+    // If SMTP environment variables are configured on Render, attempt nodemailer dispatch
+    let smtpDispatched = false;
+    let smtpError = null;
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: parseInt(process.env.SMTP_PORT || '587', 10),
+          secure: process.env.SMTP_SECURE === 'true',
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          }
+        });
+
+        await transporter.sendMail({
+          from: process.env.SMTP_FROM || `"OPS Attendance" <${process.env.SMTP_USER}>`,
+          to: targetEmail,
+          subject,
+          text: textReport
+        });
+        smtpDispatched = true;
+      } catch (err) {
+        console.warn('SMTP dispatch error:', err.message);
+        smtpError = err.message;
+      }
+    }
 
     return res.json({
       success: true,
-      message: `Payroll report for ${site.name} (${reportData.month_name}) dispatched to Accounts at ${recipient_email.trim()}!`,
+      target_email: targetEmail,
+      subject,
+      smtp_dispatched: smtpDispatched,
+      smtp_error: smtpError,
+      gmail_url: gmailUrl,
+      mailto_url: mailtoUrl,
+      report_text: textReport,
+      message: smtpDispatched
+        ? `Payroll statement sent via SMTP directly to ${targetEmail}!`
+        : `Payroll statement recorded for ${targetEmail}. Open Gmail compose to dispatch immediately.`,
       report: reportData
     });
   } catch (error) {

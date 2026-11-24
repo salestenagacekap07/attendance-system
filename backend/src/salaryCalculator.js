@@ -16,6 +16,9 @@
  * - OT Additions:
  *    - Normal Days (Mon - Sat): 1.5x Hourly Rate
  *    - Rest Days (Sunday) & Public Holidays (PH): 2.0x Hourly Rate
+ * - Days Worked Breakdown for Accounts:
+ *    - Explicitly tracks regular days, Sundays, Saturdays (extra), and PH days worked
+ *    - Generates formula e.g. "5 Working Days + 1 Sunday = 6 Days Worked"
  */
 
 function parseTimeToHours(timeStr) {
@@ -151,6 +154,12 @@ function calculateWorkerSalary({
   let restDayPhOtHours = 0;   // Sunday & Public Holiday (2.0x)
   let totalLateHours = 0;
 
+  // Detailed days worked breakdown
+  let regularDaysWorked = 0;
+  let sundayDaysWorked = 0;
+  let saturdayExtraDaysWorked = 0;
+  let phDaysWorked = 0;
+
   attendanceRecords.forEach(r => {
     const status = r.status || 'Present';
     if (status === 'Present') presentDays++;
@@ -162,9 +171,24 @@ function calculateWorkerSalary({
       presentDays++; // OT day is also a day worked
     }
 
-    const { dateStr, isSunday } = getDateDetails(r.attendance_date);
+    const { dateStr, isSunday, isSaturday } = getDateDetails(r.attendance_date);
     const isPH = phDateSet.has(dateStr);
     const isRestDayOrPH = isSunday || isPH;
+
+    const isWorked = ['Present', 'OT', 'Half Day'].includes(status);
+    const weight = status === 'Half Day' ? 0.5 : 1;
+
+    if (isWorked) {
+      if (isSunday) {
+        sundayDaysWorked += weight;
+      } else if (isPH) {
+        phDaysWorked += weight;
+      } else if (isSaturday && pattern === 'Mon-Fri') {
+        saturdayExtraDaysWorked += weight;
+      } else {
+        regularDaysWorked += weight;
+      }
+    }
 
     let otVal = Number(r.ot_hours) || 0;
     // If status is OT and ot_hours wasn't explicitly set, default to net working hours
@@ -183,6 +207,32 @@ function calculateWorkerSalary({
   });
 
   const totalOtHours = normalOtHours + restDayPhOtHours;
+  const totalDaysWorked = regularDaysWorked + sundayDaysWorked + saturdayExtraDaysWorked + phDaysWorked;
+
+  // Build human-readable formula string for Accounts:
+  // e.g. "20 Regular Days (Mon-Fri) + 1 Sunday = 21 Days Worked"
+  const formulaParts = [];
+  if (regularDaysWorked > 0) {
+    formulaParts.push(`${regularDaysWorked} Normal Working Days`);
+  }
+  if (saturdayExtraDaysWorked > 0) {
+    formulaParts.push(`${saturdayExtraDaysWorked} Sat Extra`);
+  }
+  if (sundayDaysWorked > 0) {
+    formulaParts.push(`${sundayDaysWorked} Sunday`);
+  }
+  if (phDaysWorked > 0) {
+    formulaParts.push(`${phDaysWorked} Public Holiday`);
+  }
+
+  let daysWorkedFormula = '';
+  if (formulaParts.length > 1) {
+    daysWorkedFormula = `${formulaParts.join(' + ')} = Total ${totalDaysWorked} Days`;
+  } else if (formulaParts.length === 1) {
+    daysWorkedFormula = `${formulaParts[0]} = Total ${totalDaysWorked} Days`;
+  } else {
+    daysWorkedFormula = `0 Days Worked`;
+  }
 
   let perDaySalary = 0;
   let perHourSalary = 0;
@@ -221,6 +271,7 @@ function calculateWorkerSalary({
     return {
       worker_id: worker.id,
       worker_name: worker.name,
+      employee_code: worker.employee_code,
       worker_type: worker.worker_type,
       salary_type: 'monthly',
       base_salary: baseSalary,
@@ -232,6 +283,14 @@ function calculateWorkerSalary({
       net_working_hours: netHours,
       per_day_salary: perDaySalary,
       per_hour_salary: perHourSalary,
+      days_worked: {
+        regular: regularDaysWorked,
+        saturday_extra: saturdayExtraDaysWorked,
+        sunday: sundayDaysWorked,
+        ph: phDaysWorked,
+        total_worked: totalDaysWorked,
+        formula: daysWorkedFormula
+      },
       attendance_summary: {
         present_days: presentDays,
         absent_days: absentDays,
@@ -283,6 +342,7 @@ function calculateWorkerSalary({
     return {
       worker_id: worker.id,
       worker_name: worker.name,
+      employee_code: worker.employee_code,
       worker_type: worker.worker_type,
       salary_type: 'daily',
       base_salary: dailyRate,
@@ -294,6 +354,14 @@ function calculateWorkerSalary({
       net_working_hours: netHours,
       per_day_salary: perDaySalary,
       per_hour_salary: perHourSalary,
+      days_worked: {
+        regular: regularDaysWorked,
+        saturday_extra: saturdayExtraDaysWorked,
+        sunday: sundayDaysWorked,
+        ph: phDaysWorked,
+        total_worked: totalDaysWorked,
+        formula: daysWorkedFormula
+      },
       attendance_summary: {
         present_days: presentDays,
         absent_days: absentDays,

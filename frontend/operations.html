@@ -324,7 +324,7 @@
       background: #ffffff;
       border-radius: 14px;
       width: 100%;
-      max-width: 640px;
+      max-width: 660px;
       max-height: 90vh;
       overflow-y: auto;
       padding: 24px;
@@ -368,13 +368,98 @@
       box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
     }
 
-    /* Print Formatting */
+    /* Dedicated 1-Page Printable Report (Landscape A4) */
+    #printReportView {
+      display: none;
+    }
+
+    @page {
+      size: A4 landscape;
+      margin: 8mm 10mm;
+    }
+
     @media print {
-      body { background: white; color: black; }
-      .topbar, .tabs-bar, .filter-bar, button, .top-actions, .kpi-grid { display: none !important; }
-      .panel { border: none; box-shadow: none; padding: 0; margin: 0; }
-      .container { max-width: 100%; margin: 0; padding: 0; }
-      th, td { border: 1px solid #ccc !important; padding: 6px !important; }
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        font-size: 8.5pt !important;
+        line-height: 1.3 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .container, .modal-backdrop, #toast {
+        display: none !important;
+      }
+      #printReportView {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      #printReportView * {
+        box-sizing: border-box !important;
+      }
+      .print-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 2px solid #0f172a;
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+      }
+      .print-meta-strip {
+        display: flex;
+        justify-content: space-between;
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-size: 8pt;
+        margin-bottom: 8px;
+      }
+      .print-summary-strip {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .print-sum-box {
+        flex: 1;
+        border: 1px solid #cbd5e1;
+        padding: 6px 8px;
+        border-radius: 4px;
+        text-align: center;
+      }
+      .print-sum-lbl { font-size: 7pt; color: #475569; text-transform: uppercase; font-weight: 700; }
+      .print-sum-val { font-size: 11pt; font-weight: 800; color: #0f172a; }
+      table.print-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 8pt !important;
+        margin-bottom: 12px !important;
+      }
+      table.print-table th, table.print-table td {
+        border: 1px solid #64748b !important;
+        padding: 4px 6px !important;
+      }
+      table.print-table th {
+        background: #f1f5f9 !important;
+        font-weight: 800 !important;
+        text-transform: uppercase;
+      }
+      .print-signatures {
+        display: flex;
+        justify-content: space-between;
+        gap: 30px;
+        margin-top: 14px;
+        page-break-inside: avoid;
+      }
+      .sig-box {
+        flex: 1;
+        border-top: 1px solid #334155;
+        padding-top: 4px;
+        font-size: 8pt;
+      }
     }
   </style>
 </head>
@@ -544,12 +629,13 @@
       <div class="panel">
         <div class="panel-header">
           <div>
-            <h2 class="panel-title"><span>📋</span> Site Attendance Sheet & Daily Updates</h2>
+            <h2 class="panel-title"><span>📋</span> Site Attendance Sheet & Monthly Roster</h2>
             <p class="panel-desc">
-              Update worker attendance daily (Present, Absent, Half Day, Leave, OT). Automatically generates the monthly attendance sheet.
+              Auto-generate monthly schedule, track how many times each person attended, and update daily records.
             </p>
           </div>
-          <div style="display:flex; gap:8px;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-success" id="btnAutoGenerateMonth" title="Auto-populate standard working days for all workers at this site">⚡ Auto-Generate Monthly Schedule</button>
             <button type="button" class="btn-accent" id="openUpdateAttBtn">✍️ Update Worker Attendance</button>
           </div>
         </div>
@@ -593,29 +679,63 @@
           <!-- Populated dynamically -->
         </div>
 
-        <!-- Attendance Sheet Table -->
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Worker Name</th>
-                <th>Category</th>
-                <th>Status</th>
-                <th>In Time</th>
-                <th>Out Time</th>
-                <th>Late Hours</th>
-                <th>OT Hours</th>
-                <th>Source</th>
-                <th>Remarks</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="attSheetTableBody">
-              <tr><td colspan="11" style="text-align:center; padding:20px; color:#64748b;">Select a site to view attendance sheet.</td></tr>
-            </tbody>
-          </table>
+        <!-- SECTION A: Monthly Attendance Summary by Worker (How many times attended) -->
+        <div style="margin-bottom:24px;">
+          <h3 style="font-size:1.05rem; font-weight:700; margin:0 0 8px; display:flex; align-items:center; gap:8px;">
+            <span>📊</span> Monthly Attendance Summary (How Many Times Each Person Attended)
+          </h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Worker Name</th>
+                  <th>Employee Code</th>
+                  <th>Category</th>
+                  <th style="background:#e0f2fe; color:#0369a1; font-weight:800;">Times Attended in Month</th>
+                  <th>Normal Days (Mon–Sat) 🟢</th>
+                  <th>Sunday Rest Days ⭐</th>
+                  <th>Public Holidays 🟣</th>
+                  <th>Absent Days 🔴</th>
+                  <th>Half Days 🟡</th>
+                  <th>Total OT Hours ⏱️</th>
+                </tr>
+              </thead>
+              <tbody id="attSummaryTableBody">
+                <tr><td colspan="10" style="text-align:center; padding:16px; color:#64748b;">Loading summary...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        <!-- SECTION B: Detailed Daily Activity Records -->
+        <div>
+          <h3 style="font-size:1.05rem; font-weight:700; margin:0 0 8px; display:flex; align-items:center; gap:8px;">
+            <span>📋</span> Detailed Daily Attendance Records
+          </h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Worker Name</th>
+                  <th>Category</th>
+                  <th>Status</th>
+                  <th>In Time</th>
+                  <th>Out Time</th>
+                  <th>Late Hours</th>
+                  <th>OT Hours</th>
+                  <th>Source</th>
+                  <th>Remarks</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="attSheetTableBody">
+                <tr><td colspan="11" style="text-align:center; padding:20px; color:#64748b;">Select a site to view attendance sheet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -632,8 +752,8 @@
             </p>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="btn-success" id="openEmailAccountsBtn">✉️ Send Report to Accounts</button>
-            <button type="button" class="btn-secondary" id="printPayrollBtn">🖨️ Export PDF / Print</button>
+            <button type="button" class="btn-success" id="openEmailAccountsBtn">✉️ Send Report to Accounts (acctcm06@gmail.com)</button>
+            <button type="button" class="btn-secondary" id="printPayrollBtn">🖨️ Export PDF / Print (Single Page)</button>
           </div>
         </div>
 
@@ -682,16 +802,16 @@
           <table>
             <thead>
               <tr>
-                <th>Worker Name</th>
+                <th>Worker Name & Code</th>
                 <th>Type & Mode</th>
                 <th>Base Salary</th>
-                <th>Working Days</th>
+                <th style="background:#fef3c7; color:#92400e;">Days Worked Breakdown (Formula)</th>
+                <th>Scheduled Days</th>
                 <th>Net Hours/Day</th>
-                <th>Per Day Rate</th>
-                <th>Per Hour Rate</th>
+                <th>Rates (Day / Hr)</th>
                 <th>Attendance Summary</th>
-                <th>Deductions (Absent/Half/Late)</th>
-                <th>OT Pay</th>
+                <th>Deductions</th>
+                <th>Overtime Pay (1.5x / 2.0x)</th>
                 <th style="background:#f1f5f9; font-weight:800;">Net Payable (RM)</th>
               </tr>
             </thead>
@@ -755,6 +875,63 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- DEDICATED 1-PAGE PRINTABLE PAYROLL REPORT (A4 LANDSCAPE) -->
+  <!-- ========================================================================= -->
+  <div id="printReportView">
+    <div class="print-header">
+      <div>
+        <h2 style="margin:0; font-size:14pt; color:#0f172a;">MALAYSIAN FACILITY & CLEANING OPERATIONS</h2>
+        <div style="font-size:9pt; font-weight:700; color:#475569; text-transform:uppercase; margin-top:2px;">
+          MONTHLY WORKER ATTENDANCE & PAYROLL STATEMENT — ACCOUNTS COPY
+        </div>
+      </div>
+      <div style="text-align:right; font-size:8pt; color:#64748b;">
+        Recipient: <strong>acctcm06@gmail.com</strong><br/>
+        Printed: <span id="printTimestamp"></span>
+      </div>
+    </div>
+
+    <div class="print-meta-strip" id="printMetaStrip">
+      <!-- Site, period, schedule -->
+    </div>
+
+    <div class="print-summary-strip" id="printSummaryStrip">
+      <!-- KPI totals -->
+    </div>
+
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>Worker Name & Code</th>
+          <th>Category</th>
+          <th>Base Salary</th>
+          <th style="background:#e2e8f0;">Days Worked Breakdown (Formula)</th>
+          <th>Rates (Day / Hr)</th>
+          <th>Attendance (Pres / Abs / Late)</th>
+          <th>Deductions</th>
+          <th>OT (1.5x / 2.0x)</th>
+          <th style="background:#cbd5e1; font-weight:800;">Net Payable (RM)</th>
+        </tr>
+      </thead>
+      <tbody id="printTableBody"></tbody>
+      <tfoot id="printTableFoot" style="font-weight:800; background:#f1f5f9;"></tfoot>
+    </table>
+
+    <div class="print-signatures">
+      <div class="sig-box">
+        <strong>Prepared & Certified by (OPS Executive):</strong><br/><br/>
+        Signature: ____________________________________<br/>
+        Date: ________________________
+      </div>
+      <div class="sig-box">
+        <strong>Verified & Received by (Accounts & Finance — acctcm06@gmail.com):</strong><br/><br/>
+        Signature: ____________________________________<br/>
+        Date: ________________________
+      </div>
+    </div>
   </div>
 
   <!-- ========================================================================= -->
@@ -1011,7 +1188,7 @@
       <form id="emailForm">
         <div class="form-group">
           <label for="emailRecipient">Accounts Department Email *</label>
-          <input type="email" id="emailRecipient" placeholder="accounts@facility.com.my" value="accounts@facility.com.my" required />
+          <input type="email" id="emailRecipient" value="acctcm06@gmail.com" required />
         </div>
         <div class="form-group">
           <label for="emailSubject">Subject</label>
@@ -1019,13 +1196,17 @@
         </div>
         <div class="form-group">
           <label for="emailNotes">Additional Notes for Accounts</label>
-          <textarea id="emailNotes" rows="3" placeholder="e.g. Certified by OPS Executive. Ready for payment release."></textarea>
+          <textarea id="emailNotes" rows="2" placeholder="e.g. Certified by OPS Executive. Ready for payment release."></textarea>
         </div>
-        <div id="emailPreviewBox" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-size:0.85rem; margin-bottom:16px;"></div>
 
-        <div style="display:flex; justify-content:flex-end; gap:10px;">
-          <button type="button" class="btn-secondary" onclick="closeModal('emailModal')">Cancel</button>
-          <button type="submit" class="btn-success" id="btnSubmitEmail">🚀 Send Report</button>
+        <div id="emailPreviewBox" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-size:0.82rem; margin-bottom:16px; max-height:220px; overflow-y:auto; font-family:monospace; white-space:pre-wrap;"></div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn-secondary" onclick="copyEmailContent()">📋 Copy Report Text</button>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-secondary" onclick="closeModal('emailModal')">Cancel</button>
+            <button type="submit" class="btn-success" id="btnSubmitEmail">🚀 Send & Open in Gmail (acctcm06@gmail.com)</button>
+          </div>
         </div>
       </form>
     </div>
@@ -1427,7 +1608,7 @@
     document.getElementById('workerSearchInput').addEventListener('input', loadWorkers);
 
     // ==========================================
-    // MODULE 3: ATTENDANCE SHEET
+    // MODULE 3: ATTENDANCE SHEET & SUMMARY
     // ==========================================
     async function loadAttendanceSheet() {
       const siteId = document.getElementById('attSiteSelect').value;
@@ -1447,17 +1628,43 @@
           <strong>Site:</strong> ${currentAttSheet.site.name} |
           <strong>Pattern:</strong> ${currentAttSheet.site.working_days_pattern} |
           <strong>Hours:</strong> ${currentAttSheet.site.working_time_start} - ${currentAttSheet.site.working_time_end} (${currentAttSheet.site.break_time_minutes}m unpaid break) |
-          <strong>Public Holidays:</strong> ${currentAttSheet.public_holidays.length} PH days in month |
+          <strong>Public Holidays in Month:</strong> ${currentAttSheet.public_holidays.length} PH days |
           <strong>Total Active Workers:</strong> ${currentAttSheet.workers.length}
         `;
 
+        // 1. Render Monthly Attendance Summary (Times Attended)
+        const summaryTbody = document.getElementById('attSummaryTableBody');
+        const summaries = currentAttSheet.workers_summary || [];
+        if (!summaries.length) {
+          summaryTbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:16px; color:#64748b;">No workers assigned to this site.</td></tr>';
+        } else {
+          summaryTbody.innerHTML = summaries.map(s => `
+            <tr>
+              <td><strong>${s.worker_name}</strong></td>
+              <td><code>${s.employee_code || '—'}</code></td>
+              <td><span class="badge ${s.worker_type === 'Cleaner' ? 'badge-monthly' : 'badge-daily'}">${s.worker_type}</span></td>
+              <td style="background:#f0fdf4;">
+                <span class="badge badge-present" style="font-size:0.88rem; padding:4px 10px;">
+                  ⭐ ${s.times_attended} Times Attended
+                </span>
+              </td>
+              <td>${s.present_count} days</td>
+              <td>${s.sunday_work_count > 0 ? `<span style="color:#d97706; font-weight:700;">+${s.sunday_work_count} Sundays</span>` : '0'}</td>
+              <td>${s.ph_work_count > 0 ? `<span style="color:#7c3aed; font-weight:700;">+${s.ph_work_count} PH Days</span>` : '0'}</td>
+              <td>${s.absent_count > 0 ? `<span style="color:#dc2626; font-weight:700;">${s.absent_count}d</span>` : '0'}</td>
+              <td>${s.half_day_count > 0 ? `<span style="color:#d97706; font-weight:700;">${s.half_day_count}d</span>` : '0'}</td>
+              <td><strong>${s.total_ot_hours}h</strong></td>
+            </tr>
+          `).join('');
+        }
+
+        // 2. Render Detailed Daily Records
         const tbody = document.getElementById('attSheetTableBody');
         if (!currentAttSheet.records || !currentAttSheet.records.length) {
-          tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px; color:#64748b;">No attendance records for this month yet. Click "Update Worker Attendance" or wait for mobile PIC approvals.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px; color:#64748b;">No daily attendance records for this month. Click "⚡ Auto-Generate Monthly Schedule" above to populate all standard working days!</td></tr>';
           return;
         }
 
-        // Map workers by ID
         const wMap = {};
         currentAttSheet.workers.forEach(w => { wMap[w.id] = w; });
 
@@ -1469,7 +1676,7 @@
           else if (r.status === 'Leave') badgeClass = 'badge-leave';
           else if (r.status === 'OT') badgeClass = 'badge-ot';
 
-          const srcLabel = r.source === 'pic_phone' ? '📱 PIC Phone' : '✍️ OPS Manual';
+          const srcLabel = r.source === 'pic_phone' ? '📱 PIC Phone' : (r.source === 'ops_schedule' ? '⚡ Scheduled' : '✍️ Manual');
 
           return `
             <tr>
@@ -1497,6 +1704,44 @@
 
     document.getElementById('loadAttSheetBtn').addEventListener('click', loadAttendanceSheet);
     document.getElementById('attSiteSelect').addEventListener('change', loadAttendanceSheet);
+
+    // Auto-Generate Monthly Schedule Button
+    document.getElementById('btnAutoGenerateMonth').addEventListener('click', async () => {
+      const siteId = document.getElementById('attSiteSelect').value;
+      const year = document.getElementById('attYearSelect').value;
+      const month = document.getElementById('attMonthSelect').value;
+
+      if (!siteId) {
+        alert('Please select a site first.');
+        return;
+      }
+
+      const siteObj = sites.find(s => s.id == siteId);
+      const siteName = siteObj ? siteObj.name : 'this site';
+
+      if (!confirm(`Auto-generate standard monthly schedule for all workers at ${siteName} for ${month}/${year}?\n\nThis will populate standard working days without overwriting any existing attendance or phone approvals.`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/operations/attendance/generate-month', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ site_id: siteId, year, month })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Failed to generate schedule.');
+          return;
+        }
+        showToast(`✅ ${data.message}`);
+        await loadAttendanceSheet();
+        await calculatePayroll();
+        await loadSummary();
+      } catch (err) {
+        alert('Network error generating monthly schedule.');
+      }
+    });
 
     document.getElementById('openUpdateAttBtn').addEventListener('click', () => {
       document.getElementById('attendanceForm').reset();
@@ -1544,6 +1789,7 @@
         closeModal('attendanceModal');
         showToast('✅ Attendance updated & monthly sheet regenerated!');
         await loadAttendanceSheet();
+        await calculatePayroll();
         await loadSummary();
       } catch (err) {
         alert('Network error saving attendance.');
@@ -1577,22 +1823,31 @@
           const isMonthly = p.salary_type === 'monthly';
           const att = p.attendance_summary;
           const ded = p.deductions;
+          const daysFormula = p.days_worked?.formula || `${p.days_worked?.total_worked || 0} Days Worked`;
 
           return `
             <tr>
-              <td><strong>${p.worker_name}</strong></td>
+              <td>
+                <strong>${p.worker_name}</strong><br/>
+                <code>${p.employee_code || '—'}</code>
+              </td>
               <td>
                 <span class="badge ${p.worker_type === 'Cleaner' ? 'badge-monthly' : 'badge-daily'}">${p.worker_type}</span><br/>
                 <span style="font-size:0.75rem; color:#64748b;">${isMonthly ? 'Monthly Salary' : 'Daily Salary'}</span>
               </td>
               <td><strong>RM ${p.base_salary.toFixed(2)}</strong></td>
+              <td style="background:#fffbeb; font-size:0.83rem;">
+                <strong style="color:#0f172a;">${daysFormula}</strong>
+              </td>
               <td>
                 <strong>${p.auto_counted_working_days} days</strong><br/>
                 <span style="font-size:0.75rem; color:#64748b;">(${p.pattern})</span>
               </td>
               <td>${p.net_working_hours}h <span style="font-size:0.72rem; color:#d97706;">(-${p.break_time_minutes}m break)</span></td>
-              <td>RM ${p.per_day_salary.toFixed(2)}</td>
-              <td>RM ${p.per_hour_salary.toFixed(2)}</td>
+              <td>
+                RM ${p.per_day_salary.toFixed(2)}/d<br/>
+                <span style="font-size:0.75rem; color:#64748b;">RM ${p.per_hour_salary.toFixed(2)}/h</span>
+              </td>
               <td style="font-size:0.8rem;">
                 🟢 ${att.present_days}d | 🔴 ${att.absent_days}d | 🟡 ${att.half_days}d<br/>
                 Late: <strong>${att.total_late_hours}h</strong><br/>
@@ -1602,7 +1857,7 @@
                 ${ded.absent > 0 ? `Absent: -RM ${ded.absent.toFixed(2)}<br/>` : ''}
                 ${ded.half_day > 0 ? `Half: -RM ${ded.half_day.toFixed(2)}<br/>` : ''}
                 ${ded.late > 0 ? `Late: -RM ${ded.late.toFixed(2)}<br/>` : ''}
-                <strong>Total Ded: -RM ${ded.total.toFixed(2)}</strong>
+                <strong>Total: -RM ${ded.total.toFixed(2)}</strong>
               </td>
               <td style="color:#7c3aed; font-size:0.82rem;">
                 <strong style="font-size:0.95rem;">+RM ${p.ot_pay.toFixed(2)}</strong><br/>
@@ -1639,11 +1894,92 @@
     document.getElementById('calculatePayrollBtn').addEventListener('click', calculatePayroll);
     document.getElementById('payrollSiteSelect').addEventListener('change', calculatePayroll);
 
+    // ==========================================
+    // EXPORT PDF / PRINT (DEDICATED 1-PAGE STATEMENT)
+    // ==========================================
     document.getElementById('printPayrollBtn').addEventListener('click', () => {
+      if (!currentPayroll || !currentPayroll.workers_payroll || !currentPayroll.workers_payroll.length) {
+        alert('Please select a site and click "Calculate Salary" first.');
+        return;
+      }
+
+      const mNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const mStr = `${mNames[currentPayroll.month]} ${currentPayroll.year}`;
+      const nowStr = new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' });
+
+      document.getElementById('printTimestamp').textContent = nowStr;
+
+      // Meta Strip
+      document.getElementById('printMetaStrip').innerHTML = `
+        <div><strong>Site Name:</strong> ${currentPayroll.site.name}</div>
+        <div><strong>Period:</strong> ${mStr}</div>
+        <div><strong>Work Pattern:</strong> ${currentPayroll.site.working_days_pattern} (${currentPayroll.site.working_time_start} - ${currentPayroll.site.working_time_end})</div>
+        <div><strong>Unpaid Break:</strong> ${currentPayroll.site.break_time_minutes} minutes</div>
+      `;
+
+      // Summary Strip
+      document.getElementById('printSummaryStrip').innerHTML = `
+        <div class="print-sum-box">
+          <div class="print-sum-lbl">Total Workers</div>
+          <div class="print-sum-val">${currentPayroll.workers_payroll.length}</div>
+        </div>
+        <div class="print-sum-box">
+          <div class="print-sum-lbl">Base Salary Total</div>
+          <div class="print-sum-val">RM ${currentPayroll.totals.total_gross.toFixed(2)}</div>
+        </div>
+        <div class="print-sum-box">
+          <div class="print-sum-lbl">Total Deductions</div>
+          <div class="print-sum-val" style="color:#dc2626;">-RM ${currentPayroll.totals.total_deductions.toFixed(2)}</div>
+        </div>
+        <div class="print-sum-box">
+          <div class="print-sum-lbl">Total Overtime Pay</div>
+          <div class="print-sum-val" style="color:#7c3aed;">+RM ${currentPayroll.totals.total_ot_pay.toFixed(2)}</div>
+        </div>
+        <div class="print-sum-box" style="background:#e0f2fe; border-color:#0284c7;">
+          <div class="print-sum-lbl" style="color:#0369a1;">Final Net Payable</div>
+          <div class="print-sum-val" style="color:#0369a1;">RM ${currentPayroll.totals.total_net.toFixed(2)}</div>
+        </div>
+      `;
+
+      // Table Body
+      document.getElementById('printTableBody').innerHTML = currentPayroll.workers_payroll.map((p, idx) => `
+        <tr>
+          <td><strong>${idx + 1}. ${p.worker_name}</strong> (${p.employee_code || '—'})</td>
+          <td>${p.worker_type} [${p.salary_type.toUpperCase()}]</td>
+          <td>RM ${p.base_salary.toFixed(2)}</td>
+          <td style="font-weight:700;">${p.days_worked?.formula || 'N/A'}</td>
+          <td>RM ${p.per_day_salary.toFixed(2)}/d | RM ${p.per_hour_salary.toFixed(2)}/h</td>
+          <td>${p.attendance_summary.present_days} Pres | ${p.attendance_summary.absent_days} Abs | Late: ${p.attendance_summary.total_late_hours}h</td>
+          <td style="color:#dc2626;">-RM ${p.deductions.total.toFixed(2)}</td>
+          <td>+RM ${p.ot_pay.toFixed(2)}</td>
+          <td style="font-weight:800; font-size:9.5pt;">RM ${p.net_salary.toFixed(2)}</td>
+        </tr>
+      `).join('');
+
+      // Table Foot
+      document.getElementById('printTableFoot').innerHTML = `
+        <tr>
+          <td colspan="2">TOTALS (${currentPayroll.workers_payroll.length} Workers)</td>
+          <td>RM ${currentPayroll.totals.total_gross.toFixed(2)}</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td style="color:#dc2626;">-RM ${currentPayroll.totals.total_deductions.toFixed(2)}</td>
+          <td style="color:#7c3aed;">+RM ${currentPayroll.totals.total_ot_pay.toFixed(2)}</td>
+          <td style="font-size:10.5pt; font-weight:800;">RM ${currentPayroll.totals.total_net.toFixed(2)}</td>
+        </tr>
+      `;
+
+      // Trigger print
       window.print();
     });
 
-    // Email to Accounts Modal
+    // ==========================================
+    // EMAIL TO ACCOUNTS (acctcm06@gmail.com)
+    // ==========================================
+    let lastGeneratedEmailText = '';
+    let lastGmailUrl = '';
+
     document.getElementById('openEmailAccountsBtn').addEventListener('click', () => {
       if (!currentPayroll || !currentPayroll.workers_payroll || !currentPayroll.workers_payroll.length) {
         alert('Please select a site and click "Calculate Salary" first.');
@@ -1653,31 +1989,47 @@
       const mNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
       const mStr = `${mNames[currentPayroll.month]} ${currentPayroll.year}`;
 
+      document.getElementById('emailRecipient').value = 'acctcm06@gmail.com';
       document.getElementById('emailSubject').value = `Payroll Statement: ${siteName} — ${mStr} [Total Net: RM ${currentPayroll.totals.total_net.toFixed(2)}]`;
-      document.getElementById('emailPreviewBox').innerHTML = `
-        <strong>Summary to be dispatched:</strong><br/>
-        🏢 <strong>Site:</strong> ${siteName}<br/>
-        📅 <strong>Period:</strong> ${mStr}<br/>
-        👥 <strong>Workers Count:</strong> ${currentPayroll.workers_payroll.length}<br/>
-        💵 <strong>Gross Base Total:</strong> RM ${currentPayroll.totals.total_gross.toFixed(2)}<br/>
-        🔻 <strong>Total Deductions:</strong> RM ${currentPayroll.totals.total_deductions.toFixed(2)}<br/>
-        ⭐ <strong>Total OT Pay (1.5x Mon-Sat + 2.0x Sun/PH):</strong> RM ${currentPayroll.totals.total_ot_pay.toFixed(2)}<br/>
-        💰 <strong>Final Net Payable:</strong> <span style="font-size:1rem; font-weight:800; color:#166534;">RM ${currentPayroll.totals.total_net.toFixed(2)}</span>
-      `;
+
+      let summaryTxt = `ACCOUNTS & PAYROLL STATEMENT — ${siteName.toUpperCase()}\n`;
+      summaryTxt += `Period: ${mStr}\n`;
+      summaryTxt += `Recipient: acctcm06@gmail.com\n`;
+      summaryTxt += `Total Workers: ${currentPayroll.workers_payroll.length}\n`;
+      summaryTxt += `Base Total: RM ${currentPayroll.totals.total_gross.toFixed(2)}\n`;
+      summaryTxt += `Total Deductions: -RM ${currentPayroll.totals.total_deductions.toFixed(2)}\n`;
+      summaryTxt += `Total Overtime Pay: +RM ${currentPayroll.totals.total_ot_pay.toFixed(2)}\n`;
+      summaryTxt += `>>> FINAL NET PAYABLE: RM ${currentPayroll.totals.total_net.toFixed(2)} <<<\n\n`;
+      summaryTxt += `WORKERS DAYS WORKED BREAKDOWN:\n`;
+      currentPayroll.workers_payroll.forEach((p, i) => {
+        summaryTxt += `${i + 1}. ${p.worker_name} (${p.employee_code || '—'}): ${p.days_worked?.formula || 'N/A'} -> Net: RM ${p.net_salary.toFixed(2)}\n`;
+      });
+
+      lastGeneratedEmailText = summaryTxt;
+      document.getElementById('emailPreviewBox').textContent = summaryTxt;
       openModal('emailModal');
     });
+
+    window.copyEmailContent = function() {
+      if (!lastGeneratedEmailText) return;
+      navigator.clipboard.writeText(lastGeneratedEmailText).then(() => {
+        showToast('📋 Copied full payroll report text to clipboard!');
+      }).catch(() => {
+        alert('Please manually select and copy the text box.');
+      });
+    };
 
     document.getElementById('emailForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const siteId = document.getElementById('payrollSiteSelect').value;
       const year = document.getElementById('payrollYearSelect').value;
       const month = document.getElementById('payrollMonthSelect').value;
-      const recipient = document.getElementById('emailRecipient').value.trim();
+      const recipient = document.getElementById('emailRecipient').value.trim() || 'acctcm06@gmail.com';
       const notes = document.getElementById('emailNotes').value.trim();
 
       const btn = document.getElementById('btnSubmitEmail');
       btn.disabled = true;
-      btn.textContent = 'Dispatching...';
+      btn.textContent = 'Preparing Dispatch...';
 
       try {
         const res = await fetch('/api/operations/payroll/send-email', {
@@ -1696,13 +2048,19 @@
           alert(data.error || 'Failed to dispatch email.');
           return;
         }
+
+        // Open Gmail Web Compose directly with pre-filled report
+        if (data.gmail_url) {
+          window.open(data.gmail_url, '_blank');
+        }
+
         closeModal('emailModal');
-        showToast(`✅ ${data.message}`);
+        showToast(`✅ Report recorded! Opened Gmail compose for ${data.target_email || recipient}`);
       } catch (err) {
         alert('Network error dispatching email.');
       } finally {
         btn.disabled = false;
-        btn.textContent = '🚀 Send Report';
+        btn.textContent = '🚀 Send & Open in Gmail (acctcm06@gmail.com)';
       }
     });
 
