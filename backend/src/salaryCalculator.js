@@ -54,6 +54,39 @@ function getDateDetails(dateStr) {
   };
 }
 
+const DAY_NAME_TO_INDEX = {
+  sun: 0, sunday: 0,
+  mon: 1, monday: 1,
+  tue: 2, tuesday: 2,
+  wed: 3, wednesday: 3,
+  thu: 4, thursday: 4,
+  fri: 5, friday: 5,
+  sat: 6, saturday: 6
+};
+
+/**
+ * Parses working days pattern from site:
+ * Can be 'Mon-Fri', 'Mon-Sat', or comma-separated list like 'Mon,Tue,Wed,Thu,Fri'
+ * Returns a Set of day-of-week numbers (0 = Sun, 1 = Mon, ..., 6 = Sat)
+ */
+function parseWorkingDaysPattern(patternStr) {
+  if (!patternStr || typeof patternStr !== 'string') {
+    return new Set([1, 2, 3, 4, 5]); // Default Mon-Fri
+  }
+  const p = patternStr.trim();
+  if (p === 'Mon-Fri') return new Set([1, 2, 3, 4, 5]);
+  if (p === 'Mon-Sat') return new Set([1, 2, 3, 4, 5, 6]);
+
+  const parts = p.split(/[,;\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+  const activeDays = new Set();
+  parts.forEach(part => {
+    if (DAY_NAME_TO_INDEX[part] !== undefined) {
+      activeDays.add(DAY_NAME_TO_INDEX[part]);
+    }
+  });
+  return activeDays.size > 0 ? activeDays : new Set([1, 2, 3, 4, 5]);
+}
+
 /**
  * Counts working days for a calendar month given site pattern, public holidays,
  * and worker attendance records on PH days.
@@ -62,6 +95,7 @@ function getMonthlyWorkingDays(year, month, pattern = 'Mon-Fri', phDateSet = new
   const totalDays = new Date(year, month, 0).getDate();
   let workingDays = 0;
   const dayBreakdown = [];
+  const activeDaysSet = parseWorkingDaysPattern(pattern);
 
   for (let d = 1; d <= totalDays; d++) {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -74,13 +108,7 @@ function getMonthlyWorkingDays(year, month, pattern = 'Mon-Fri', phDateSet = new
     const att = workerAttendanceMap[dateStr];
     const workedOnPH = isPH && att && ['Present', 'OT', 'Half Day'].includes(att.status);
 
-    let isStandardWorkingDay = false;
-    if (pattern === 'Mon-Sat') {
-      isStandardWorkingDay = !isSunday;
-    } else {
-      // Mon-Fri
-      isStandardWorkingDay = !isSunday && !isSaturday;
-    }
+    const isStandardWorkingDay = activeDaysSet.has(dayOfWeek);
 
     let isCountedWorkingDay = false;
     if (isStandardWorkingDay && !isPH) {
@@ -160,6 +188,8 @@ function calculateWorkerSalary({
   let saturdayExtraDaysWorked = 0;
   let phDaysWorked = 0;
 
+  const activeDaysSet = parseWorkingDaysPattern(pattern);
+
   attendanceRecords.forEach(r => {
     const status = r.status || 'Present';
     if (status === 'Present') presentDays++;
@@ -171,7 +201,7 @@ function calculateWorkerSalary({
       presentDays++; // OT day is also a day worked
     }
 
-    const { dateStr, isSunday, isSaturday } = getDateDetails(r.attendance_date);
+    const { dateStr, isSunday, isSaturday, dayOfWeek } = getDateDetails(r.attendance_date);
     const isPH = phDateSet.has(dateStr);
     const isRestDayOrPH = isSunday || isPH;
 
@@ -183,7 +213,7 @@ function calculateWorkerSalary({
         sundayDaysWorked += weight;
       } else if (isPH) {
         phDaysWorked += weight;
-      } else if (isSaturday && pattern === 'Mon-Fri') {
+      } else if (!activeDaysSet.has(dayOfWeek)) {
         saturdayExtraDaysWorked += weight;
       } else {
         regularDaysWorked += weight;
@@ -216,7 +246,7 @@ function calculateWorkerSalary({
     formulaParts.push(`${regularDaysWorked} Normal Working Days`);
   }
   if (saturdayExtraDaysWorked > 0) {
-    formulaParts.push(`${saturdayExtraDaysWorked} Sat Extra`);
+    formulaParts.push(`${saturdayExtraDaysWorked} Extra Off-Day`);
   }
   if (sundayDaysWorked > 0) {
     formulaParts.push(`${sundayDaysWorked} Sunday`);
@@ -396,5 +426,6 @@ module.exports = {
   calculateWorkingHours,
   getMonthlyWorkingDays,
   calculateWorkerSalary,
-  getDateDetails
+  getDateDetails,
+  parseWorkingDaysPattern
 };

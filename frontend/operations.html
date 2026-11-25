@@ -1149,14 +1149,45 @@
           </div>
         </div>
 
-        <div class="form-grid-3">
-          <div class="form-group">
-            <label for="formPattern">Working Days Pattern *</label>
-            <select id="formPattern" required>
-              <option value="Mon-Fri">Mon-Fri (Standard)</option>
-              <option value="Mon-Sat">Mon-Sat (6 Days)</option>
-            </select>
+        <!-- Working Days Pattern (Ticking Monday to Sunday) -->
+        <div class="form-group">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+            <label style="margin-bottom:0;">Working Days Pattern * (Tick days for this site)</label>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn-secondary btn-sm" style="padding:2px 8px; font-size:0.75rem;" onclick="setDaysPreset('Mon-Fri')">Mon - Fri</button>
+              <button type="button" class="btn-secondary btn-sm" style="padding:2px 8px; font-size:0.75rem;" onclick="setDaysPreset('Mon-Sat')">Mon - Sat</button>
+              <button type="button" class="btn-secondary btn-sm" style="padding:2px 8px; font-size:0.75rem;" onclick="setDaysPreset('All')">All 7 Days</button>
+            </div>
           </div>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; background:#f8fafc; padding:10px 14px; border:1px solid var(--border); border-radius:8px;">
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; white-space:nowrap;">
+              <input type="checkbox" class="chk-work-day" value="Mon" checked onchange="updateWorkingDaysLabel()" /> Mon
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; white-space:nowrap;">
+              <input type="checkbox" class="chk-work-day" value="Tue" checked onchange="updateWorkingDaysLabel()" /> Tue
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; white-space:nowrap;">
+              <input type="checkbox" class="chk-work-day" value="Wed" checked onchange="updateWorkingDaysLabel()" /> Wed
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; white-space:nowrap;">
+              <input type="checkbox" class="chk-work-day" value="Thu" checked onchange="updateWorkingDaysLabel()" /> Thu
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; white-space:nowrap;">
+              <input type="checkbox" class="chk-work-day" value="Fri" checked onchange="updateWorkingDaysLabel()" /> Fri
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; white-space:nowrap;">
+              <input type="checkbox" class="chk-work-day" value="Sat" onchange="updateWorkingDaysLabel()" /> Sat
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; white-space:nowrap;">
+              <input type="checkbox" class="chk-work-day" value="Sun" onchange="updateWorkingDaysLabel()" /> Sun
+            </label>
+          </div>
+          <div style="font-size:0.78rem; color:#1e40af; margin-top:4px; font-weight:600;" id="patternSummaryText">
+            Selected: 5 days/week (Mon, Tue, Wed, Thu, Fri)
+          </div>
+        </div>
+
+        <div class="form-grid-3">
           <div class="form-group">
             <label for="formTimeStart">Working Time Start *</label>
             <input type="time" id="formTimeStart" value="09:00" required />
@@ -1165,36 +1196,27 @@
             <label for="formTimeEnd">Working Time End *</label>
             <input type="time" id="formTimeEnd" value="17:00" required />
           </div>
-        </div>
-
-        <div class="form-grid-2">
           <div class="form-group">
             <label for="formBreakMin">Break Time (Minutes, Unpaid) *</label>
             <input type="number" id="formBreakMin" value="60" min="0" step="5" placeholder="e.g. 60 or 30" required />
-            <span style="font-size:0.75rem; color:#64748b;">This break is excluded from payable salary hours.</span>
-          </div>
-          <div class="form-group">
-            <label for="formLandscaperSalaryType">Landscaper Salary Basis</label>
-            <select id="formLandscaperSalaryType">
-              <option value="monthly">Monthly Salary</option>
-              <option value="daily">Daily Salary</option>
-            </select>
+            <span style="font-size:0.75rem; color:#64748b;">Excluded from payable hours.</span>
           </div>
         </div>
 
         <div class="form-group">
           <label>Allowed Worker Types for this Site</label>
-          <div style="display:flex; gap:16px; margin-top:6px; flex-wrap:wrap;">
-            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:normal;">
+          <div style="display:flex; gap:18px; margin-top:6px; flex-wrap:wrap; align-items:center;">
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:normal; white-space:nowrap;">
               <input type="checkbox" id="chkCleaner" checked /> Cleaner (Monthly)
             </label>
-            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:normal;">
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:normal; white-space:nowrap;">
               <input type="checkbox" id="chkGeneral" checked /> General Worker (Daily)
             </label>
-            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:normal;">
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:normal; white-space:nowrap;">
               <input type="checkbox" id="chkLandscaper" checked /> Landscaper
             </label>
           </div>
+          <span style="font-size:0.75rem; color:#64748b;">Worker salary basis (Monthly or Daily) is set per worker in Worker Directory.</span>
         </div>
 
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
@@ -1235,16 +1257,16 @@
           <div class="form-group">
             <label for="formWorkerType">Worker Category *</label>
             <select id="formWorkerType" required>
-              <option value="Cleaner">Cleaner (Monthly Salary)</option>
-              <option value="General Worker">General Worker (Daily Salary)</option>
+              <option value="Cleaner">Cleaner</option>
+              <option value="General Worker">General Worker</option>
               <option value="Landscaper">Landscaper</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="formWorkerSalaryType">Salary Type (Auto-enforced)</label>
-            <select id="formWorkerSalaryType">
-              <option value="monthly">Monthly Salary</option>
-              <option value="daily">Daily Salary</option>
+            <label for="formWorkerSalaryType">Worker Salary Basis *</label>
+            <select id="formWorkerSalaryType" required>
+              <option value="monthly">Monthly Salary (RM / Month)</option>
+              <option value="daily">Daily Salary (RM / Day)</option>
             </select>
           </div>
         </div>
@@ -1476,46 +1498,101 @@
       });
     });
 
-    // Worker type change handles salary type auto-selection
-    document.getElementById('formWorkerType').addEventListener('change', (e) => {
-      const type = e.target.value;
-      const salaryTypeSelect = document.getElementById('formWorkerSalaryType');
-      const baseLabel = document.getElementById('lblBaseSalary');
-      const baseInput = document.getElementById('formWorkerBaseSalary');
-
-      if (type === 'Cleaner') {
-        salaryTypeSelect.value = 'monthly';
-        salaryTypeSelect.disabled = true;
-        baseLabel.textContent = 'Total Monthly Salary (RM) *';
-        baseInput.placeholder = 'e.g. 3500.00';
-      } else if (type === 'General Worker') {
-        salaryTypeSelect.value = 'daily';
-        salaryTypeSelect.disabled = true;
-        baseLabel.textContent = 'Daily Salary Rate (RM/day) *';
-        baseInput.placeholder = 'e.g. 80.00';
-      } else if (type === 'Landscaper') {
-        salaryTypeSelect.disabled = false;
-        updateLandscaperLabel();
-      }
-    });
-
-    document.getElementById('formWorkerSalaryType').addEventListener('change', () => {
-      if (document.getElementById('formWorkerType').value === 'Landscaper') {
-        updateLandscaperLabel();
-      }
-    });
-
-    function updateLandscaperLabel() {
+    // Worker Salary Basis Helper (Monthly or Daily)
+    function updateWorkerSalaryLabels() {
       const isDaily = document.getElementById('formWorkerSalaryType').value === 'daily';
       const baseLabel = document.getElementById('lblBaseSalary');
       const baseInput = document.getElementById('formWorkerBaseSalary');
       if (isDaily) {
         baseLabel.textContent = 'Daily Salary Rate (RM/day) *';
-        baseInput.placeholder = 'e.g. 85.00';
+        baseInput.placeholder = 'e.g. 80.00';
       } else {
         baseLabel.textContent = 'Total Monthly Salary (RM) *';
-        baseInput.placeholder = 'e.g. 3200.00';
+        baseInput.placeholder = 'e.g. 3500.00';
       }
+    }
+
+    // Worker category selection: suggests initial salary basis, fully editable by OPS
+    document.getElementById('formWorkerType').addEventListener('change', (e) => {
+      const type = e.target.value;
+      const salaryTypeSelect = document.getElementById('formWorkerSalaryType');
+      salaryTypeSelect.disabled = false; // Always enabled for OPS
+
+      if (type === 'Cleaner') {
+        salaryTypeSelect.value = 'monthly';
+      } else if (type === 'General Worker') {
+        salaryTypeSelect.value = 'daily';
+      } else if (type === 'Landscaper') {
+        if (!salaryTypeSelect.value) salaryTypeSelect.value = 'monthly';
+      }
+      updateWorkerSalaryLabels();
+    });
+
+    document.getElementById('formWorkerSalaryType').addEventListener('change', () => {
+      updateWorkerSalaryLabels();
+    });
+
+    // Working Days Pattern Helpers (Ticking Monday to Sunday)
+    window.getSelectedWorkingDays = function() {
+      const days = [];
+      document.querySelectorAll('.chk-work-day:checked').forEach(cb => days.push(cb.value));
+      return days.length ? days.join(',') : 'Mon,Tue,Wed,Thu,Fri';
+    };
+
+    window.setSelectedWorkingDays = function(patternStr) {
+      const raw = patternStr || 'Mon-Fri';
+      let active = [];
+      if (raw === 'Mon-Fri') active = ['mon', 'tue', 'wed', 'thu', 'fri'];
+      else if (raw === 'Mon-Sat') active = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+      else active = raw.split(/[,;\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+
+      document.querySelectorAll('.chk-work-day').forEach(cb => {
+        cb.checked = active.includes(cb.value.toLowerCase());
+      });
+      updateWorkingDaysLabel();
+    };
+
+    window.setDaysPreset = function(preset) {
+      if (preset === 'Mon-Fri') {
+        setSelectedWorkingDays('Mon-Fri');
+      } else if (preset === 'Mon-Sat') {
+        setSelectedWorkingDays('Mon-Sat');
+      } else if (preset === 'All') {
+        setSelectedWorkingDays('Mon,Tue,Wed,Thu,Fri,Sat,Sun');
+      }
+    };
+
+    window.updateWorkingDaysLabel = function() {
+      const days = [];
+      document.querySelectorAll('.chk-work-day:checked').forEach(cb => days.push(cb.value));
+      const el = document.getElementById('patternSummaryText');
+      if (!el) return;
+      if (!days.length) {
+        el.textContent = '⚠️ Please tick at least 1 working day';
+        el.style.color = '#dc2626';
+      } else {
+        let summary = '';
+        if (days.length === 5 && days.join(',') === 'Mon,Tue,Wed,Thu,Fri') {
+          summary = '5 days/week (Mon - Fri)';
+        } else if (days.length === 6 && days.join(',') === 'Mon,Tue,Wed,Thu,Fri,Sat') {
+          summary = '6 days/week (Mon - Sat)';
+        } else if (days.length === 7) {
+          summary = 'Everyday (7 days/week)';
+        } else {
+          summary = `${days.length} days/week (${days.join(', ')})`;
+        }
+        el.textContent = `Selected: ${summary}`;
+        el.style.color = '#1e40af';
+      }
+    };
+
+    function formatPatternBadge(p) {
+      if (!p || p === 'Mon-Fri') return 'Mon - Fri (5d)';
+      if (p === 'Mon-Sat') return 'Mon - Sat (6d)';
+      const days = p.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+      if (days.length === 7) return 'All 7 Days';
+      if (days.length <= 3) return days.join(', ');
+      return `${days.length} Days (${days[0]}-${days[days.length - 1]})`;
     }
 
     // Geolocation helper
@@ -1579,7 +1656,7 @@
                 <span style="font-weight:600;">${s.working_time_start} - ${s.working_time_end}</span><br/>
                 <span style="font-size:0.8rem; color:#d97706; font-weight:600;">☕ ${s.break_time_minutes || 60}m Unpaid Break</span>
               </td>
-              <td><span class="badge ${s.working_days_pattern === 'Mon-Sat' ? 'badge-halfday' : 'badge-monthly'}">${s.working_days_pattern || 'Mon-Fri'}</span></td>
+              <td><span class="badge ${s.working_days_pattern === 'Mon-Sat' ? 'badge-halfday' : 'badge-monthly'}">${formatPatternBadge(s.working_days_pattern)}</span></td>
               <td><span style="font-size:0.82rem; color:#334155;">${types}</span></td>
               <td>${s.opening_date ? s.opening_date.substring(0,10) : '—'}</td>
               <td>
@@ -1603,6 +1680,7 @@
       document.getElementById('siteForm').reset();
       document.getElementById('formSiteId').value = '';
       document.getElementById('formOpeningDate').value = new Date().toISOString().substring(0, 10);
+      setDaysPreset('Mon-Fri');
       document.getElementById('siteModalTitle').textContent = '🏢 Create New Site';
       openModal('siteModal');
     });
@@ -1618,11 +1696,10 @@
       document.getElementById('formOpeningDate').value = s.opening_date ? s.opening_date.substring(0, 10) : '';
       document.getElementById('formLatitude').value = s.latitude;
       document.getElementById('formLongitude').value = s.longitude;
-      document.getElementById('formPattern').value = s.working_days_pattern || 'Mon-Fri';
+      setSelectedWorkingDays(s.working_days_pattern || 'Mon-Fri');
       document.getElementById('formTimeStart').value = s.working_time_start || '09:00';
       document.getElementById('formTimeEnd').value = s.working_time_end || '17:00';
       document.getElementById('formBreakMin').value = s.break_time_minutes || 60;
-      document.getElementById('formLandscaperSalaryType').value = s.landscaper_salary_type || 'monthly';
 
       const allowed = Array.isArray(s.allowed_worker_types) ? s.allowed_worker_types : ['Cleaner'];
       document.getElementById('chkCleaner').checked = allowed.includes('Cleaner');
@@ -1665,11 +1742,11 @@
         opening_date: document.getElementById('formOpeningDate').value,
         latitude: parseFloat(document.getElementById('formLatitude').value),
         longitude: parseFloat(document.getElementById('formLongitude').value),
-        working_days_pattern: document.getElementById('formPattern').value,
+        working_days_pattern: getSelectedWorkingDays(),
         working_time_start: document.getElementById('formTimeStart').value,
         working_time_end: document.getElementById('formTimeEnd').value,
         break_time_minutes: parseInt(document.getElementById('formBreakMin').value, 10),
-        landscaper_salary_type: document.getElementById('formLandscaperSalaryType').value,
+        landscaper_salary_type: 'monthly',
         allowed_worker_types: allowed
       };
 
@@ -1753,9 +1830,9 @@
     document.getElementById('openAddWorkerBtn').addEventListener('click', () => {
       document.getElementById('workerForm').reset();
       document.getElementById('formWorkerId').value = '';
-      document.getElementById('formWorkerSalaryType').disabled = true;
+      document.getElementById('formWorkerSalaryType').disabled = false;
       document.getElementById('formWorkerSalaryType').value = 'monthly';
-      document.getElementById('lblBaseSalary').textContent = 'Total Monthly Salary (RM) *';
+      updateWorkerSalaryLabels();
       document.getElementById('formWorkerBaseSalary').value = '3500.00';
       document.getElementById('workerModalTitle').textContent = '👥 Add Worker';
       openModal('workerModal');
@@ -1769,8 +1846,9 @@
       document.getElementById('formWorkerName').value = w.name;
       document.getElementById('formWorkerCode').value = w.employee_code;
       document.getElementById('formWorkerType').value = w.worker_type;
-      document.getElementById('formWorkerSalaryType').value = w.salary_type;
-      document.getElementById('formWorkerSalaryType').disabled = (w.worker_type !== 'Landscaper');
+      document.getElementById('formWorkerSalaryType').disabled = false;
+      document.getElementById('formWorkerSalaryType').value = w.salary_type || 'monthly';
+      updateWorkerSalaryLabels();
       document.getElementById('formWorkerBaseSalary').value = w.base_salary;
       document.getElementById('formWorkerPhone').value = w.phone || '';
 

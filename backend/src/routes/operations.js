@@ -1,7 +1,7 @@
 const express = require('express');
 const nodemailer = require('nodemailer');
 const { pool } = require('../db');
-const { calculateWorkerSalary, getDateDetails } = require('../salaryCalculator');
+const { calculateWorkerSalary, getDateDetails, parseWorkingDaysPattern } = require('../salaryCalculator');
 
 const router = express.Router();
 
@@ -269,17 +269,14 @@ router.post('/api/operations/workers', async function (req, res) {
 
     const type = ['Cleaner', 'General Worker', 'Landscaper'].includes(worker_type) ? worker_type : 'Cleaner';
 
-    // Enforce salary logic:
-    // 1. Cleaner: Monthly Salary
-    // 2. General Worker: Daily Salary
-    // 3. Landscaper: Monthly OR Daily
+    // Worker salary basis: OPS can configure Monthly or Daily for any worker
     let enforcedSalaryType = 'monthly';
-    if (type === 'Cleaner') {
-      enforcedSalaryType = 'monthly';
+    if (salary_type) {
+      enforcedSalaryType = String(salary_type).toLowerCase() === 'daily' ? 'daily' : 'monthly';
     } else if (type === 'General Worker') {
       enforcedSalaryType = 'daily';
-    } else if (type === 'Landscaper') {
-      enforcedSalaryType = (salary_type || 'monthly').toLowerCase() === 'daily' ? 'daily' : 'monthly';
+    } else {
+      enforcedSalaryType = 'monthly';
     }
 
     const baseVal = Number(base_salary) > 0 ? Number(base_salary) : (enforcedSalaryType === 'monthly' ? 1500.00 : 80.00);
@@ -317,12 +314,12 @@ router.put('/api/operations/workers/:id', async function (req, res) {
     const { site_id, name, employee_code, worker_type, salary_type, base_salary, phone, status } = req.body || {};
 
     let enforcedSalaryType = undefined;
-    if (worker_type === 'Cleaner') {
-      enforcedSalaryType = 'monthly';
+    if (salary_type) {
+      enforcedSalaryType = String(salary_type).toLowerCase() === 'daily' ? 'daily' : 'monthly';
     } else if (worker_type === 'General Worker') {
       enforcedSalaryType = 'daily';
-    } else if (worker_type === 'Landscaper' && salary_type) {
-      enforcedSalaryType = salary_type.toLowerCase() === 'daily' ? 'daily' : 'monthly';
+    } else if (worker_type === 'Cleaner') {
+      enforcedSalaryType = 'monthly';
     }
 
     const updateSql = `
@@ -523,12 +520,8 @@ router.post('/api/operations/attendance/generate-month', async function (req, re
       const isSaturday = (dow === 6);
       const isPH = phSet.has(dateStr);
 
-      let isWorkingDay = false;
-      if (pattern === 'Mon-Sat') {
-        isWorkingDay = !isSunday && !isPH;
-      } else {
-        isWorkingDay = !isSunday && !isSaturday && !isPH;
-      }
+      const activeDaysSet = parseWorkingDaysPattern(pattern);
+      const isWorkingDay = activeDaysSet.has(dow) && !isPH;
 
       if (isWorkingDay) {
         for (const w of workers) {
