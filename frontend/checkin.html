@@ -403,8 +403,8 @@
       photoInput.click();
     });
 
-    // Client-side image compression
-    function compressImage(file, maxWidth = 800, quality = 0.75) {
+    // Client-side image compression (optimized ~35-50 KB for fast 4G upload & low DB storage)
+    function compressImage(file, maxWidth = 540, quality = 0.62) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -437,7 +437,7 @@
 
       try {
         takePhotoBtn.textContent = 'Processing photo...';
-        capturedPhotoBase64 = await compressImage(file, 800, 0.75);
+        capturedPhotoBase64 = await compressImage(file, 540, 0.62);
         photoPreview.src = capturedPhotoBase64;
         photoPreviewContainer.style.display = 'block';
         photoSection.classList.remove('missing');

@@ -1083,4 +1083,28 @@ router.post('/api/operations/test-whatsapp', async function (req, res) {
   }
 });
 
+// Database storage & selfie retention status
+router.get('/api/operations/storage-stats', async function (_req, res) {
+  try {
+    const retentionDays = Math.max(1, parseInt(process.env.SELFIE_RETENTION_DAYS || '60', 10));
+    const [dbSizeRes, checkinsRes, attRes] = await Promise.all([
+      pool.query(`SELECT pg_size_pretty(pg_database_size(current_database())) AS db_size_pretty, pg_database_size(current_database()) AS db_size_bytes`),
+      pool.query(`SELECT COUNT(*)::int AS total_checkins, COUNT(photo_data)::int AS active_selfies FROM checkins`),
+      pool.query(`SELECT COUNT(*)::int AS daily_attendance_rows FROM daily_attendance`)
+    ]);
+
+    return res.json({
+      db_size_pretty: dbSizeRes.rows[0].db_size_pretty,
+      db_size_bytes: Number(dbSizeRes.rows[0].db_size_bytes),
+      total_checkins: checkinsRes.rows[0].total_checkins,
+      active_selfies: checkinsRes.rows[0].active_selfies,
+      daily_attendance_rows: attRes.rows[0].daily_attendance_rows,
+      selfie_retention_days: retentionDays
+    });
+  } catch (err) {
+    console.error('Error in /api/operations/storage-stats', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
